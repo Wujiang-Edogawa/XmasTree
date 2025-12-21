@@ -10,37 +10,43 @@ const BackgroundMusic: React.FC = () => {
 
         audio.volume = 0.5; // 设置默认音量
 
-        // 尝试自动播放
-        const playPromise = audio.play();
-        
-        if (playPromise !== undefined) {
-            playPromise
-                .then(() => {
-                    setIsPlaying(true);
-                })
-                .catch((error) => {
-                    console.log("Autoplay prevented by browser:", error);
-                    setIsPlaying(false);
-                });
-        }
-
-        // 添加一次性点击监听器作为后备方案
-        const handleFirstInteraction = () => {
-            if (audio.paused) {
-                audio.play()
-                    .then(() => setIsPlaying(true))
-                    .catch(console.error);
+        const tryPlay = async () => {
+            try {
+                await audio.play();
+                setIsPlaying(true);
+            } catch (error) {
+                console.log("Autoplay prevented:", error);
+                setIsPlaying(false);
             }
         };
 
-        window.addEventListener('click', handleFirstInteraction, { once: true });
-        window.addEventListener('touchstart', handleFirstInteraction, { once: true });
-        window.addEventListener('keydown', handleFirstInteraction, { once: true });
+        // 尝试自动播放
+        tryPlay();
+
+        // 监听交互以恢复播放
+        const handleInteraction = () => {
+            if (audio.paused) {
+                tryPlay();
+            }
+        };
+
+        // 监听页面可见性变化 (针对移动端切后台)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isPlaying) {
+                tryPlay();
+            }
+        };
+
+        window.addEventListener('click', handleInteraction, { once: true });
+        window.addEventListener('touchstart', handleInteraction, { once: true });
+        window.addEventListener('keydown', handleInteraction, { once: true });
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
-            window.removeEventListener('click', handleFirstInteraction);
-            window.removeEventListener('touchstart', handleFirstInteraction);
-            window.removeEventListener('keydown', handleFirstInteraction);
+            window.removeEventListener('click', handleInteraction);
+            window.removeEventListener('touchstart', handleInteraction);
+            window.removeEventListener('keydown', handleInteraction);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 

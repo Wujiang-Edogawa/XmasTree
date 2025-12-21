@@ -5,6 +5,45 @@ import TechEffects from './components/TechEffects';
 import BackgroundMusic from './components/BackgroundMusic';
 import { AnimatePresence, motion } from 'framer-motion';
 
+// --- Error Boundary ---
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error: Error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        console.error("3D Context Error:", error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-red-400 cinzel p-8 text-center z-50 relative bg-black">
+                    <h2 className="text-2xl mb-4">⚠️ Graphics Error</h2>
+                    <p className="text-sm opacity-80 mb-4">
+                        {this.state.error?.message || "Something went wrong with the 3D scene."}
+                    </p>
+                    <p className="text-xs text-gray-500 mb-6">
+                        Your device might struggle with the visual effects.
+                    </p>
+                    <button
+                        className="px-6 py-2 border border-red-400/50 rounded hover:bg-red-400/10 transition-colors"
+                        onClick={() => window.location.reload()}
+                    >
+                        Reload Page
+                    </button>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
 
 // --- 照片弹窗 ---
 const PhotoModal: React.FC<{ url: string | null, onClose: () => void }> = ({ url, onClose }) => {
@@ -144,9 +183,11 @@ const AppContent: React.FC = () => {
 
             {/* 3D 场景层 (z-10) */}
             <div className="absolute inset-0 z-10">
-                <Suspense fallback={<div className="flex items-center justify-center h-full text-red-400 cinzel animate-pulse text-2xl">🎄 Loading Christmas Magic... ❄️</div>}>
-                    <Experience />
-                </Suspense>
+                <ErrorBoundary>
+                    <Suspense fallback={<div className="flex items-center justify-center h-full text-red-400 cinzel animate-pulse text-2xl">🎄 Loading Christmas Magic... ❄️</div>}>
+                        <Experience />
+                    </Suspense>
+                </ErrorBoundary>
             </div>
 
             {/* 科技感特效层 (z-20) */}

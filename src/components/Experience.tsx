@@ -27,18 +27,22 @@ const Rig = () => {
 };
 
 const Experience: React.FC = () => {
+  // Detect mobile device (simple check)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      dpr={isMobile ? [1, 1.5] : [1, 2]} // Lower DPR on mobile for performance
       camera={{ position: [0, 0, 18], fov: 45, near: 0.1, far: 100 }}
       gl={{
         antialias: false,
-        alpha: true, // 启用透明度
+        alpha: true,
         toneMapping: THREE.ReinhardToneMapping,
         toneMappingExposure: 1.5,
         stencil: false,
-        depth: true
+        depth: true,
+        powerPreference: 'high-performance'
       }}
     >
       {/* 移除背景色，让摄像头背景可见 */}
@@ -91,18 +95,19 @@ const Experience: React.FC = () => {
       />
       <Rig />
 
-      {/* Post Processing - Optimized for Clarity (No DoF) */}
-      <EffectComposer enableNormalPass={false}>
-        <Bloom
-          luminanceThreshold={1.0}
-          mipmapBlur
-          intensity={0.6}
-          radius={0.4}
-          levels={8}
-        />
-        <Noise opacity={0.04} />
-        <Vignette eskil={false} offset={0.1} darkness={1.0} />
-      </EffectComposer>
+      {/* Post Processing - Conditional Rendering for Mobile */}
+      {!isMobile && (
+        <EffectComposer enableNormalPass={false}>
+          <Bloom
+            luminanceThreshold={1.0}
+            mipmapBlur
+            intensity={0.6}
+            radius={0.4}
+          />
+          <Vignette eskil={false} offset={0.1} darkness={1.1} />
+          <Noise opacity={0.02} />
+        </EffectComposer>
+      )}
     </Canvas>
   );
 };
