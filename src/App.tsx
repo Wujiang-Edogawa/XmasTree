@@ -2,6 +2,7 @@ import React, { useState, Suspense, useContext, useEffect, useRef } from 'react'
 import { TreeContextType, AppState, TreeContext, PointerCoords } from './types';
 import Experience from './components/Experience';
 import TechEffects from './components/TechEffects';
+import BackgroundMusic from './components/BackgroundMusic';
 import { AnimatePresence, motion } from 'framer-motion';
 
 
@@ -150,6 +151,9 @@ const AppContent: React.FC = () => {
 
             {/* 科技感特效层 (z-20) */}
             <TechEffects />
+
+            {/* 背景音乐组件 */}
+            <BackgroundMusic />
 
             {/* UI 层 (z-30) */}
             <div className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between p-8">

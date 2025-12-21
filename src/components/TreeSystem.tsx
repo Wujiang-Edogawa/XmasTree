@@ -188,9 +188,10 @@ const TreeSystem: React.FC = () => {
       // --- FORMED: Time Spiral Layout ---
       // 螺旋上升: i 越大 (越新)，h 越高
       const t = photoCount > 1 ? i / (photoCount - 1) : 0.5;
-      const h = t * 14 - 7; // 高度范围 -7 到 7
-      const radius = (7 - (h + 7)) * 0.4 + 1.5; // 树锥形半径
-      const angle = t * Math.PI * 10; // 螺旋圈数 (5圈)
+      const h = t * 12 - 6; // 高度范围 -6 到 6 (稍微收缩一点，让两端不那么突兀)
+      // 让照片悬浮在树的外围，形成环绕带
+      const radius = (10 - h) * 0.6 + 4.5; // 半径加大，确保在树叶外侧
+      const angle = t * Math.PI * 8; // 螺旋圈数 (4圈)
 
       const treeX = Math.cos(angle) * radius;
       const treeY = h;
