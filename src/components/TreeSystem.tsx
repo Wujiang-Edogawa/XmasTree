@@ -134,17 +134,18 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
   );
 };
 
-// --- Main Tree System ---
-const TreeSystem: React.FC = () => {
-  const { state, rotationSpeed, pointer, clickTrigger, setSelectedPhotoUrl, selectedPhotoUrl } = useContext(TreeContext) as TreeContextType;
-  const { camera, raycaster } = useThree();
-  const pointsRef = useRef<THREE.Points>(null);
-  const lightsRef = useRef<THREE.InstancedMesh>(null);
-  const trunkRef = useRef<THREE.Mesh>(null);
-  const groupRef = useRef<THREE.Group>(null);
+  // --- Main Tree System ---
+  const TreeSystem: React.FC = () => {
+    const { state, rotationSpeed, pointer, clickTrigger, setSelectedPhotoUrl, selectedPhotoUrl, setIsLetterOpen } = useContext(TreeContext) as TreeContextType;
+    const { camera, raycaster } = useThree();
+    const pointsRef = useRef<THREE.Points>(null);
+    const lightsRef = useRef<THREE.InstancedMesh>(null);
+    const trunkRef = useRef<THREE.Mesh>(null);
+    const groupRef = useRef<THREE.Group>(null);
+    const letterStarRef = useRef<THREE.Mesh>(null);
 
-  const progress = useRef(0);
-  const treeRotation = useRef(0);
+    const progress = useRef(0);
+    const treeRotation = useRef(0);
 
   // Staggered Loading State
   const [loadedCount, setLoadedCount] = useState(0);
@@ -296,6 +297,20 @@ const TreeSystem: React.FC = () => {
         }
       });
 
+      // 3. 检查顶部星星信件点击
+      if (letterStarRef.current && state === 'FORMED') {
+        const starPos = new THREE.Vector3();
+        letterStarRef.current.getWorldPosition(starPos);
+        const screenPos = starPos.clone().project(camera);
+        if (screenPos.z < 1) {
+          const dist = Math.hypot(screenPos.x - ndcX, screenPos.y - ndcY);
+          if (dist < SELECTION_THRESHOLD * 1.5) { // 稍微大一点的判定范围
+             setIsLetterOpen(true);
+             return;
+          }
+        }
+      }
+
       if (closestPhotoId) {
         // 如果点击的是当前照片，且过了锁定时间 -> 关闭
         if (selectedPhotoUrl === closestPhotoId) {
@@ -321,7 +336,14 @@ const TreeSystem: React.FC = () => {
     const targetProgress = state === 'FORMED' ? 1 : 0;
     progress.current = THREE.MathUtils.damp(progress.current, targetProgress, 2.0, delta);
     const ease = progress.current * progress.current * (3 - 2 * progress.current);
-    treeRotation.current += (state === 'FORMED' ? rotationSpeed : 0.05) * delta;
+
+    // 悬停/交互时暂停旋转
+    let currentRotationSpeed = rotationSpeed;
+    if (selectedPhotoUrl) {
+        currentRotationSpeed = 0;
+    }
+    
+    treeRotation.current += (state === 'FORMED' ? currentRotationSpeed : 0.05) * delta;
 
     if (groupRef.current) {
       groupRef.current.position.x = 0;
@@ -437,7 +459,7 @@ const TreeSystem: React.FC = () => {
       ))}
 
       {/* Time Line Connection (Only visible in FORMED state) */}
-      {state === 'FORMED' && (
+      {state === 'FORMED' && photoObjects.length > 1 && (
         <Line
           points={photoObjects.map(obj => new THREE.Vector3(...obj.data.treePos))}
           color="#ffd700"
@@ -446,6 +468,14 @@ const TreeSystem: React.FC = () => {
           lineWidth={1}
         />
       )}
+
+      {/* Top Star / Letter Trigger */}
+      <mesh ref={letterStarRef} position={[0, 9, 0]} scale={[0.8, 0.8, 0.8]}>
+        <octahedronGeometry args={[1, 0]} />
+        <meshStandardMaterial color="#ff3333" emissive="#ff0000" emissiveIntensity={2} toneMapped={false} />
+        {/* Glow Halo */}
+        <pointLight distance={5} intensity={5} color="#ff0000" />
+      </mesh>
     </group>
   );
 };

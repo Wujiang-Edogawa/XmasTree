@@ -1,8 +1,55 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
+import { TreeContext, TreeContextType } from '../types';
+
+const PLAYLIST = ['/music/bgm.mp3', '/music/bgm2.mp3'];
 
 const BackgroundMusic: React.FC = () => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+    const { setIsLetterOpen } = useContext(TreeContext) as TreeContextType;
+    const hasTriggeredLetterRef = useRef(false);
+
+    // 监听播放结束 & 切歌逻辑
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        // 确保不开启单曲循环，由 React 控制列表循环
+        audio.loop = false;
+
+        const handleEnded = () => {
+            if (!hasTriggeredLetterRef.current) {
+                // 第一次播放结束：弹出信件
+                setIsLetterOpen(true);
+                hasTriggeredLetterRef.current = true;
+            }
+            
+            // 切换到下一首
+            setCurrentTrackIndex(prev => (prev + 1) % PLAYLIST.length);
+        };
+
+        audio.addEventListener('ended', handleEnded);
+
+        return () => {
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, [setIsLetterOpen]);
+
+    // 监听曲目变化，自动播放下一首
+    useEffect(() => {
+        // 只有当已经处于播放状态（或初始自动播放启动后），切歌才自动播放
+        // 我们通过 isPlaying 标记来判断是否应该播放
+        if (isPlaying) {
+            const audio = audioRef.current;
+            if (audio) {
+                // 等待 src 更新后播放
+                // React 的 render 是同步的，DOM 更新后 audio.src 已经变了
+                // 但为了保险，可以稍微延迟一点或者直接播放
+                audio.play().catch(e => console.log("Playlist continue play prevented:", e));
+            }
+        }
+    }, [currentTrackIndex]);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -64,7 +111,7 @@ const BackgroundMusic: React.FC = () => {
 
     return (
         <div className="fixed top-6 right-6 z-50 pointer-events-auto">
-            <audio ref={audioRef} src="/music/bgm.mp3" loop />
+            <audio ref={audioRef} src={PLAYLIST[currentTrackIndex]} />
             <button
                 onClick={togglePlay}
                 className={`

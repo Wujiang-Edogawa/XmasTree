@@ -31,6 +31,12 @@ export interface TreeContextType {
   // 新增：认证状态和密钥管理
   isAuthenticated: boolean;
   setIsAuthenticated: (auth: boolean) => void;
+  // 新增：信件状态
+  isLetterOpen: boolean;
+  setIsLetterOpen: (open: boolean) => void;
+  letterContent: string;
+  setLetterContent: (content: string) => void;
+  
   secretKey: string;
   setSecretKey: (key: string) => void;
 }

@@ -5,6 +5,7 @@ import TechEffects from './components/TechEffects';
 import BackgroundMusic from './components/BackgroundMusic';
 import LoginScreen from './components/LoginScreen';
 import SecretSettings from './components/SecretSettings';
+import LetterModal from './components/LetterModal';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- Error Boundary ---
@@ -75,7 +76,7 @@ const PhotoModal: React.FC<{ url: string | null, onClose: () => void }> = ({ url
 }
 
 const AppContent: React.FC = () => {
-    const { state, setState, pointer, setPointer, selectedPhotoUrl, setSelectedPhotoUrl, setClickTrigger, zoomOffset, setZoomOffset, isAuthenticated } = useContext(TreeContext) as TreeContextType;
+    const { state, setState, pointer, setPointer, selectedPhotoUrl, setSelectedPhotoUrl, setClickTrigger, zoomOffset, setZoomOffset, isAuthenticated, isLetterOpen } = useContext(TreeContext) as TreeContextType;
     const [showSettings, setShowSettings] = useState(false);
     
     // 始终执行 Hooks (不能放在条件判断之后)
@@ -89,11 +90,6 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         zoomOffsetRef.current = zoomOffset;
     }, [zoomOffset]);
-
-    // 如果未认证，显示登录界面 (Hook 执行完后再返回)
-    if (!isAuthenticated) {
-        return <LoginScreen />;
-    }
 
     const toggleState = () => {
         setState(state === 'CHAOS' ? 'FORMED' : 'CHAOS');
@@ -123,6 +119,11 @@ const AppContent: React.FC = () => {
         setZoomOffset(next);
     };
 
+    // 如果未认证，显示登录界面 (移到最后，确保所有 Hooks 执行完毕)
+    if (!isAuthenticated) {
+        return <LoginScreen />;
+    }
+
     return (
         <main
             className="relative w-full h-screen bg-black text-white overflow-hidden"
@@ -150,12 +151,12 @@ const AppContent: React.FC = () => {
 
                 const now = Date.now();
                 const lastTap = lastTapRef.current;
-                const isFast = lastTap && now - lastTap.time < 280;
-                const isClose = lastTap && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 25;
+                const isFast = lastTap && now - lastTap.time < 300; // 稍微放宽时间限制
+                const isClose = lastTap && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30;
                 if (isFast && isClose) {
                     ignoreClickUntilRef.current = now + 500;
                     lastTapRef.current = null;
-                    toggleState();
+                    // toggleState(); // 移除这里的切换，交给 onDoubleClick 或 PointerUp 处理
                     return;
                 }
                 lastTapRef.current = { time: now, x: e.clientX, y: e.clientY };
@@ -221,8 +222,10 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* 弹窗层 (z-100) */}
-            <AnimatePresence>
-                {selectedPhotoUrl && <PhotoModal url={selectedPhotoUrl} onClose={() => setSelectedPhotoUrl(null)} />}
+            <AnimatePresence mode="wait">
+                {selectedPhotoUrl && <PhotoModal key="photo-modal" url={selectedPhotoUrl} onClose={() => setSelectedPhotoUrl(null)} />}
+                {showSettings && <SecretSettings key="settings-modal" onClose={() => setShowSettings(false)} />}
+                {isLetterOpen && <LetterModal key="letter-modal" />}
             </AnimatePresence>
         </main>
     );
@@ -230,7 +233,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
     const [state, setState] = useState<AppState>('CHAOS');
-    const [rotationSpeed, setRotationSpeed] = useState<number>(0.3); // 固定基础旋转速度
+    const [rotationSpeed, setRotationSpeed] = useState<number>(0.1); // 降低基础旋转速度 (0.3 -> 0.1)
     const [pointer, setPointer] = useState<PointerCoords | null>(null);
     const [clickTrigger, setClickTrigger] = useState<number>(0);
     const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
@@ -249,6 +252,18 @@ const App: React.FC = () => {
         localStorage.setItem('christmas_secret_key', secretKey);
     }, [secretKey]);
 
+    // 信件状态
+    const [isLetterOpen, setIsLetterOpen] = useState(false);
+    const [letterContent, setLetterContent] = useState('');
+
+    // 加载信件内容
+    useEffect(() => {
+        fetch('/Letter/Happy Christmas.txt')
+            .then(res => res.text())
+            .then(text => setLetterContent(text))
+            .catch(err => console.error("Failed to load letter:", err));
+    }, []);
+
     return (
         <TreeContext.Provider value={{
             state, setState,
@@ -258,7 +273,9 @@ const App: React.FC = () => {
             selectedPhotoUrl, setSelectedPhotoUrl,
             zoomOffset, setZoomOffset,
             isAuthenticated, setIsAuthenticated,
-            secretKey, setSecretKey
+            secretKey, setSecretKey,
+            isLetterOpen, setIsLetterOpen,
+            letterContent, setLetterContent
         }}>
             <AppContent />
         </TreeContext.Provider>
