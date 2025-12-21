@@ -27,6 +27,12 @@ export interface TreeContextType {
   // 新增：缩放偏移量 (双手手势控制)
   zoomOffset: number;
   setZoomOffset: Dispatch<SetStateAction<number>>;
+
+  // 新增：认证状态和密钥管理
+  isAuthenticated: boolean;
+  setIsAuthenticated: (auth: boolean) => void;
+  secretKey: string;
+  setSecretKey: (key: string) => void;
 }
 
 export interface ParticleData {

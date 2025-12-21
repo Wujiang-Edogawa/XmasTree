@@ -3,6 +3,8 @@ import { TreeContextType, AppState, TreeContext, PointerCoords } from './types';
 import Experience from './components/Experience';
 import TechEffects from './components/TechEffects';
 import BackgroundMusic from './components/BackgroundMusic';
+import LoginScreen from './components/LoginScreen';
+import SecretSettings from './components/SecretSettings';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- Error Boundary ---
@@ -73,7 +75,10 @@ const PhotoModal: React.FC<{ url: string | null, onClose: () => void }> = ({ url
 }
 
 const AppContent: React.FC = () => {
-    const { state, setState, pointer, setPointer, selectedPhotoUrl, setSelectedPhotoUrl, setClickTrigger, zoomOffset, setZoomOffset } = useContext(TreeContext) as TreeContextType;
+    const { state, setState, pointer, setPointer, selectedPhotoUrl, setSelectedPhotoUrl, setClickTrigger, zoomOffset, setZoomOffset, isAuthenticated } = useContext(TreeContext) as TreeContextType;
+    const [showSettings, setShowSettings] = useState(false);
+    
+    // 始终执行 Hooks (不能放在条件判断之后)
     const zoomOffsetRef = useRef(zoomOffset);
     const activePointersRef = useRef(new Map<number, { x: number, y: number }>());
     const pinchStartRef = useRef<{ distance: number; zoomOffset: number } | null>(null);
@@ -84,6 +89,11 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         zoomOffsetRef.current = zoomOffset;
     }, [zoomOffset]);
+
+    // 如果未认证，显示登录界面 (Hook 执行完后再返回)
+    if (!isAuthenticated) {
+        return <LoginScreen />;
+    }
 
     const toggleState = () => {
         setState(state === 'CHAOS' ? 'FORMED' : 'CHAOS');
@@ -226,6 +236,19 @@ const App: React.FC = () => {
     const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
     const [zoomOffset, setZoomOffset] = useState<number>(0);
 
+    // 认证状态 (默认 false，每次刷新需重新登录)
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
+    // 密钥管理 (持久化存储)
+    const [secretKey, setSecretKey] = useState(() => {
+        return localStorage.getItem('christmas_secret_key') || 'Happy Christmas';
+    });
+
+    // 监听密钥变化并保存
+    useEffect(() => {
+        localStorage.setItem('christmas_secret_key', secretKey);
+    }, [secretKey]);
+
     return (
         <TreeContext.Provider value={{
             state, setState,
@@ -233,7 +256,9 @@ const App: React.FC = () => {
             pointer, setPointer,
             clickTrigger, setClickTrigger,
             selectedPhotoUrl, setSelectedPhotoUrl,
-            zoomOffset, setZoomOffset
+            zoomOffset, setZoomOffset,
+            isAuthenticated, setIsAuthenticated,
+            secretKey, setSecretKey
         }}>
             <AppContent />
         </TreeContext.Provider>
