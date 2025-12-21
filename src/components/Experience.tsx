@@ -83,7 +83,7 @@ const Experience: React.FC = () => {
       {/* Controls & Rig */}
       <OrbitControls
         enablePan={false}
-        enableZoom={true}
+        enableZoom={false}
         minDistance={8}
         maxDistance={40}
         maxPolarAngle={Math.PI / 1.6}

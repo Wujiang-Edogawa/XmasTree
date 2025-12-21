@@ -5,15 +5,12 @@ import * as THREE from 'three';
 import { TreeContext, TreeContextType } from '../types';
 
 const CrystalOrnaments: React.FC = () => {
-  // 1. 引入 panOffset
-  const { state, rotationSpeed, panOffset } = useContext(TreeContext) as TreeContextType;
+  // 1. 引入 state
+  const { state, rotationSpeed } = useContext(TreeContext) as TreeContextType;
   const groupRef = useRef<THREE.Group>(null);
 
   const progress = useRef(0);
   const treeRotation = useRef(0);
-
-  // 2. 增加平滑位移 Ref
-  const currentPan = useRef({ x: 0, y: 0 });
 
   const ornaments = useMemo(() => {
     const count = 50; // 减少装饰物数量，让照片更突出
@@ -67,17 +64,9 @@ const CrystalOrnaments: React.FC = () => {
     const spinFactor = state === 'FORMED' ? rotationSpeed : 0.05;
     treeRotation.current += spinFactor * delta;
 
-    // 3. 应用平移逻辑 (与 TreeSystem 保持一致)
-    // 允许在任何状态下平移，使用较快的跟随速度
-    const targetPanX = panOffset.x;
-    const targetPanY = panOffset.y;
-
-    currentPan.current.x = THREE.MathUtils.lerp(currentPan.current.x, targetPanX, 0.2);
-    currentPan.current.y = THREE.MathUtils.lerp(currentPan.current.y, targetPanY, 0.2);
-
     if (groupRef.current) {
-      groupRef.current.position.x = currentPan.current.x;
-      groupRef.current.position.y = currentPan.current.y;
+      groupRef.current.position.x = 0;
+      groupRef.current.position.y = 0;
 
       groupRef.current.children.forEach((child, i) => {
         if (child.name === 'STAR') {

@@ -136,7 +136,7 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
 
 // --- Main Tree System ---
 const TreeSystem: React.FC = () => {
-  const { state, rotationSpeed, rotationBoost, pointer, clickTrigger, setSelectedPhotoUrl, selectedPhotoUrl, panOffset } = useContext(TreeContext) as TreeContextType;
+  const { state, rotationSpeed, pointer, clickTrigger, setSelectedPhotoUrl, selectedPhotoUrl } = useContext(TreeContext) as TreeContextType;
   const { camera, raycaster } = useThree();
   const pointsRef = useRef<THREE.Points>(null);
   const lightsRef = useRef<THREE.InstancedMesh>(null);
@@ -145,9 +145,6 @@ const TreeSystem: React.FC = () => {
 
   const progress = useRef(0);
   const treeRotation = useRef(0);
-
-  // 用于平滑过渡 Pan
-  const currentPan = useRef({ x: 0, y: 0 });
 
   // Staggered Loading State
   const [loadedCount, setLoadedCount] = useState(0);
@@ -245,11 +242,11 @@ const TreeSystem: React.FC = () => {
   const photoOpenTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (state === 'CHAOS' && pointer) {
+    if (pointer) {
       // 如果已经有选中的照片，检查是否需要关闭
       if (selectedPhotoUrl) {
-        // 检查锁定时间 (增加到 3 秒)
-        if (Date.now() - photoOpenTimeRef.current < 3000) {
+        // 检查锁定时间 (防止误触)
+        if (Date.now() - photoOpenTimeRef.current < 500) {
           return; // 锁定期间禁止关闭
         }
 
@@ -301,7 +298,7 @@ const TreeSystem: React.FC = () => {
       if (closestPhotoId) {
         // 如果点击的是当前照片，且过了锁定时间 -> 关闭
         if (selectedPhotoUrl === closestPhotoId) {
-          if (Date.now() - photoOpenTimeRef.current > 3000) {
+          if (Date.now() - photoOpenTimeRef.current > 500) {
             setSelectedPhotoUrl(null);
           }
         } else {
@@ -311,7 +308,7 @@ const TreeSystem: React.FC = () => {
         }
       } else if (selectedPhotoUrl) {
         // Clicked on empty space -> Close photo (if not locked)
-        if (Date.now() - photoOpenTimeRef.current > 3000) {
+        if (Date.now() - photoOpenTimeRef.current > 500) {
           setSelectedPhotoUrl(null);
         }
       }
@@ -323,19 +320,11 @@ const TreeSystem: React.FC = () => {
     const targetProgress = state === 'FORMED' ? 1 : 0;
     progress.current = THREE.MathUtils.damp(progress.current, targetProgress, 2.0, delta);
     const ease = progress.current * progress.current * (3 - 2 * progress.current);
-    treeRotation.current += (state === 'FORMED' ? (rotationSpeed + rotationBoost) : 0.05) * delta;
-
-    // 应用平移 (带阻尼)
-    // 允许在任何状态下平移，使用较快的跟随速度
-    const targetPanX = panOffset.x;
-    const targetPanY = panOffset.y;
-
-    currentPan.current.x = THREE.MathUtils.lerp(currentPan.current.x, targetPanX, 0.2);
-    currentPan.current.y = THREE.MathUtils.lerp(currentPan.current.y, targetPanY, 0.2);
+    treeRotation.current += (state === 'FORMED' ? rotationSpeed : 0.05) * delta;
 
     if (groupRef.current) {
-      groupRef.current.position.x = currentPan.current.x;
-      groupRef.current.position.y = currentPan.current.y;
+      groupRef.current.position.x = 0;
+      groupRef.current.position.y = 0;
     }
 
     if (pointsRef.current) {
