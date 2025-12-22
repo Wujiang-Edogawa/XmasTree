@@ -149,7 +149,7 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
 
   // --- Data Generation ---
   const { foliageData, photosData, lightsData } = useMemo(() => {
-    const particleCount = 4500;
+    const particleCount = 32000; // 稀释20% (原 40000 -> 32000)
     const foliage = new Float32Array(particleCount * 3); const foliageChaos = new Float32Array(particleCount * 3); const foliageTree = new Float32Array(particleCount * 3); const sizes = new Float32Array(particleCount);
     const sphere = random.inSphere(new Float32Array(particleCount * 3), { radius: 18 }); for (let i = 0; i < particleCount * 3; i++) foliageChaos[i] = sphere[i];
     for (let i = 0; i < particleCount; i++) { const i3 = i * 3; const h = Math.random() * 14; const coneRadius = (14 - h) * 0.45; const angle = h * 3.0 + Math.random() * Math.PI * 2; foliageTree[i3] = Math.cos(angle) * coneRadius; foliageTree[i3 + 1] = h - 6; foliageTree[i3 + 2] = Math.sin(angle) * coneRadius; sizes[i] = Math.random() * 1.5 + 0.5; }
@@ -400,8 +400,28 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
 
   return (
     <group ref={groupRef}>
-      <mesh ref={trunkRef} position={[0, 0, 0]}><cylinderGeometry args={[0.2, 0.8, 14, 8]} /><meshStandardMaterial color="#3E2723" roughness={0.9} metalness={0.1} /></mesh>
-      <points ref={pointsRef}> <bufferGeometry> <bufferAttribute attach="attributes-position" count={foliageData.current.length / 3} array={foliageData.current} itemSize={3} /> <bufferAttribute attach="attributes-size" count={foliageData.sizes.length} array={foliageData.sizes} itemSize={1} /> </bufferGeometry> <foliageMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} /> </points>
+      <mesh ref={trunkRef} position={[0, 1, 0]}>
+        <cylinderGeometry args={[0.2, 0.8, 14, 8]} />
+        <meshStandardMaterial 
+            color="#3E2723" 
+            roughness={0.9} 
+            metalness={0.1} 
+            transparent 
+            opacity={0.7} 
+        />
+      </mesh>
+      <points ref={pointsRef} key={foliageData.current.length}>
+         <bufferGeometry>
+             <bufferAttribute attach="attributes-position" count={foliageData.current.length / 3} array={foliageData.current} itemSize={3} />
+             <bufferAttribute attach="attributes-size" count={foliageData.sizes.length} array={foliageData.sizes} itemSize={1} />
+         </bufferGeometry>
+         <foliageMaterial 
+            uPixelRatio={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
+            transparent 
+            depthWrite={false} 
+            blending={THREE.AdditiveBlending} 
+         />
+      </points>
       <instancedMesh ref={lightsRef} args={[undefined, undefined, lightsData.count]}><sphereGeometry args={[0.05, 8, 8]} /><meshStandardMaterial color="#ffddaa" emissive="#ffbb00" emissiveIntensity={3} toneMapped={false} /></instancedMesh>
       {photoObjects.map((obj, index) => (
         <group key={obj.id} ref={(el) => { obj.ref.current = el; }}>
