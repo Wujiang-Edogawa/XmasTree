@@ -160,9 +160,9 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
           clearInterval(interval);
           return prev;
         }
-        return prev + 1; // Load 1 photo per tick (smoother)
+        return prev + 1;
       });
-    }, 100); // 100ms interval
+    }, 30); // Accelerated loading speed (100ms -> 30ms)
     return () => clearInterval(interval);
   }, [photoObjects.length]);
 
