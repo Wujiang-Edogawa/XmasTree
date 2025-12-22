@@ -6,6 +6,7 @@ import BackgroundMusic from './components/BackgroundMusic';
 import LoginScreen from './components/LoginScreen';
 import SecretSettings from './components/SecretSettings';
 import LetterModal from './components/LetterModal';
+import CreatorDashboard from './components/CreatorDashboard';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- Error Boundary ---
@@ -238,42 +239,55 @@ const AppContent: React.FC = () => {
                 {showSettings && <SecretSettings key="settings-modal" onClose={() => setShowSettings(false)} />}
                 {isLetterOpen && <LetterModal key="letter-modal" />}
             </AnimatePresence>
+
+            {/* Creator Dashboard (z-150) */}
+            <CreatorDashboard />
         </main>
     );
 };
 
+import { loadDefaultPhotos } from './utils/photoLoader';
+
 const App: React.FC = () => {
     const [state, setState] = useState<AppState>('FORMED');
-    const [rotationSpeed, setRotationSpeed] = useState<number>(0.1); // 降低基础旋转速度 (0.3 -> 0.1)
+    const [rotationSpeed, setRotationSpeed] = useState<number>(0.1);
     const [pointer, setPointer] = useState<PointerCoords | null>(null);
     const [clickTrigger, setClickTrigger] = useState<number>(0);
     const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
     const [zoomOffset, setZoomOffset] = useState<number>(0);
 
-    // 认证状态 (默认 false，每次刷新需重新登录)
+    // Auth & Creator Mode
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
-    // 密钥管理 (持久化存储)
-    const [secretKey, setSecretKey] = useState(() => {
-        return localStorage.getItem('christmas_secret_key') || 'Happy Christmas';
-    });
+    const [secretKey, setSecretKey] = useState(() => localStorage.getItem('christmas_secret_key') || 'Happy Christmas');
+    const [isCreatorMode, setIsCreatorMode] = useState(false);
+    const [treeId, setTreeId] = useState<string | null>(null);
 
-    // 监听密钥变化并保存
+    // Data Sources
+    const [photos, setPhotos] = useState<{ url: string; fileName?: string }[]>([]);
+    const [isLetterOpen, setIsLetterOpen] = useState(false);
+    const [letterContent, setLetterContent] = useState('');
+
     useEffect(() => {
         localStorage.setItem('christmas_secret_key', secretKey);
     }, [secretKey]);
 
-    // 信件状态
-    const [isLetterOpen, setIsLetterOpen] = useState(false);
-    const [letterContent, setLetterContent] = useState('');
-
-    // 加载信件内容
+    // Initial Load: Load default photos if no custom tree is loaded yet
     useEffect(() => {
-        fetch('/Letter/Happy Christmas.txt')
-            .then(res => res.text())
-            .then(text => setLetterContent(text))
-            .catch(err => console.error("Failed to load letter:", err));
-    }, []);
+        if (photos.length === 0 && !treeId) {
+            const defaults = loadDefaultPhotos();
+            setPhotos(defaults);
+        }
+    }, [treeId]);
+
+    // Load default letter
+    useEffect(() => {
+        if (!treeId) { // Only load default letter if not viewing a custom tree
+            fetch('/Letter/Happy Christmas.txt')
+                .then(res => res.text())
+                .then(text => setLetterContent(text))
+                .catch(err => console.error("Failed to load letter:", err));
+        }
+    }, [treeId]);
 
     return (
         <TreeContext.Provider value={{
@@ -286,7 +300,11 @@ const App: React.FC = () => {
             isAuthenticated, setIsAuthenticated,
             secretKey, setSecretKey,
             isLetterOpen, setIsLetterOpen,
-            letterContent, setLetterContent
+            letterContent, setLetterContent,
+            // New Context Props
+            photos, setPhotos,
+            isCreatorMode, setIsCreatorMode,
+            treeId, setTreeId
         }}>
             <AppContent />
         </TreeContext.Provider>

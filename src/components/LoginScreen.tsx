@@ -1,28 +1,59 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TreeContext, TreeContextType } from '../types';
+import { supabase } from '../supabaseClient';
 
 const LoginScreen: React.FC = () => {
-    const { secretKey, setIsAuthenticated } = useContext(TreeContext) as TreeContextType;
+    const { setIsAuthenticated, setPhotos, setLetterContent, setIsCreatorMode, setTreeId } = useContext(TreeContext) as TreeContextType;
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsChecking(true);
+        const code = input.trim();
 
-        // 模拟一点延迟，更有仪式感
-        setTimeout(() => {
-            if (input.trim() === secretKey) {
+        // 1. Creator Mode Check
+        if (code === 'Happy Christmas') {
+            setTimeout(() => {
+                setIsCreatorMode(true);
                 setIsAuthenticated(true);
-            } else {
-                setError(true);
-                setInput('');
-                setTimeout(() => setError(false), 2000);
+                setIsChecking(false);
+            }, 800);
+            return;
+        }
+
+        // 2. Viewer Mode Check (Supabase)
+        try {
+            const { data, error } = await supabase
+                .from('christmas_trees')
+                .select('*')
+                .eq('spell_key', code)
+                .single();
+
+            if (error || !data) {
+                throw new Error('Invalid Spell');
             }
+
+            // Load remote data
+            setTreeId(data.id);
+            if (data.letter_content) setLetterContent(data.letter_content);
+            if (data.photo_urls && Array.isArray(data.photo_urls)) {
+                setPhotos(data.photo_urls.map((url: string) => ({ url, fileName: undefined })));
+            }
+            
+            // TODO: Handle music_id if implemented
+
+            setIsAuthenticated(true);
+        } catch (err) {
+            console.error(err);
+            setError(true);
+            setInput('');
+            setTimeout(() => setError(false), 2000);
+        } finally {
             setIsChecking(false);
-        }, 800);
+        }
     };
 
     return (

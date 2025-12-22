@@ -52,25 +52,6 @@ const ShimmerMaterial = shaderMaterial(
 );
 extend({ ShimmerMaterial });
 
-const photosGlob = import.meta.glob('../assets/photos/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
-
-const photoFiles = Object.entries(photosGlob)
-  .map(([path, url]) => {
-    const fileName = path.split('/').pop();
-    return { fileName, url: url as string };
-  })
-  .filter((item): item is { fileName: string; url: string } => Boolean(item.fileName))
-  .sort((a, b) => {
-    const aNum = Number.parseInt(a.fileName!.split('.')[0], 10);
-    const bNum = Number.parseInt(b.fileName!.split('.')[0], 10);
-    const aIsNum = Number.isFinite(aNum);
-    const bIsNum = Number.isFinite(bNum);
-    if (aIsNum && bIsNum) return aNum - bNum;
-    if (aIsNum) return -1;
-    if (bIsNum) return 1;
-    return a.fileName!.localeCompare(b.fileName!, undefined, { numeric: true, sensitivity: 'base' });
-  });
-
 // --- Photo Component ---
 const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: THREE.Euler; scale: number; id: string; shouldLoad: boolean }> = ({ url, position, rotation, scale, id, shouldLoad }) => {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
@@ -137,7 +118,7 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
 
   // --- Main Tree System ---
   const TreeSystem: React.FC = () => {
-    const { state, rotationSpeed, pointer, clickTrigger, setSelectedPhotoUrl, selectedPhotoUrl, setIsLetterOpen } = useContext(TreeContext) as TreeContextType;
+    const { state, rotationSpeed, pointer, clickTrigger, setSelectedPhotoUrl, selectedPhotoUrl, setIsLetterOpen, photos } = useContext(TreeContext) as TreeContextType;
     const { camera, raycaster } = useThree();
     const pointsRef = useRef<THREE.Points>(null);
     const lightsRef = useRef<THREE.InstancedMesh>(null);
@@ -178,14 +159,19 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
     for (let i = 0; i < lightCount * 3; i++) lightChaos[i] = lSphere[i];
     for (let i = 0; i < lightCount; i++) { const i3 = i * 3; const t = i / lightCount; const h = t * 13; const coneRadius = (14 - h) * 0.48; const angle = t * Math.PI * 25; lightTree[i3] = Math.cos(angle) * coneRadius; lightTree[i3 + 1] = h - 6; lightTree[i3 + 2] = Math.sin(angle) * coneRadius; }
 
-    const photoCount = photoFiles.length;
-    const photos: ParticleData[] = [];
+    const photoCount = photos.length;
+    const photoParticles: ParticleData[] = [];
 
     for (let i = 0; i < photoCount; i++) {
-      const { fileName, url } = photoFiles[i];
-      const timeMatch = /^(\d{4})_(\d{2})_/.exec(fileName);
-      const year = timeMatch ? Number.parseInt(timeMatch[1], 10) : undefined;
-      const month = timeMatch ? timeMatch[2] : undefined;
+      const { fileName, url } = photos[i];
+      let year: number | undefined;
+      let month: string | undefined;
+      
+      if (fileName) {
+        const timeMatch = /^(\d{4})_(\d{2})_/.exec(fileName);
+        year = timeMatch ? Number.parseInt(timeMatch[1], 10) : undefined;
+        month = timeMatch ? timeMatch[2] : undefined;
+      }
 
       // --- FORMED: Time Spiral Layout ---
       // 螺旋上升: i 越大 (越新)，h 越高
@@ -213,10 +199,9 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
       const chaosY = r * Math.sin(phi) * Math.sin(theta) * 0.6; // Y轴压扁一点，形成椭球
       const chaosZ = r * Math.cos(phi);
 
-      // const imageUrl = `/photos/${fileName}`; // Old manual path
-      const imageUrl = url; // Use the imported URL directly
+      const imageUrl = url; 
 
-      photos.push({
+      photoParticles.push({
         id: `photo-${i}`,
         type: 'PHOTO',
         year: year,
@@ -234,8 +219,8 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
         color: 'white'
       });
     }
-    return { foliageData: { current: foliage, chaos: foliageChaos, tree: foliageTree, sizes }, photosData: photos, lightsData: { chaos: lightChaos, tree: lightTree, count: lightCount } };
-  }, []);
+    return { foliageData: { current: foliage, chaos: foliageChaos, tree: foliageTree, sizes }, photosData: photoParticles, lightsData: { chaos: lightChaos, tree: lightTree, count: lightCount } };
+  }, [photos]);
 
   useEffect(() => {
     setPhotoObjects(photosData.map(p => ({ id: p.id, url: p.image!, ref: React.createRef(), data: p, pos: new THREE.Vector3(), rot: new THREE.Euler(), scale: p.scale })));

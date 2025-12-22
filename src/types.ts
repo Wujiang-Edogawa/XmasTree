@@ -39,6 +39,14 @@ export interface TreeContextType {
   
   secretKey: string;
   setSecretKey: (key: string) => void;
+
+  // --- 升级：动态数据源 ---
+  photos: { url: string; fileName?: string }[];
+  setPhotos: (photos: { url: string; fileName?: string }[]) => void;
+  isCreatorMode: boolean;
+  setIsCreatorMode: (isCreator: boolean) => void;
+  treeId: string | null;
+  setTreeId: (id: string | null) => void;
 }
 
 export interface ParticleData {
