@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageOps
 import os
 
 def compress_images(directories=['src/assets/photos', 'public/photos'], max_size=(1024, 1024), quality=85):
@@ -18,6 +18,9 @@ def compress_images(directories=['src/assets/photos', 'public/photos'], max_size
                 filepath = os.path.join(directory, filename)
                 try:
                     with Image.open(filepath) as img:
+                        # Fix orientation based on EXIF
+                        img = ImageOps.exif_transpose(img)
+                        
                         # Force loading to prevent "resource warning" or issues with overwriting
                         img.load()
                         
