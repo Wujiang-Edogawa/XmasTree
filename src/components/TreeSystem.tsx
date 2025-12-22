@@ -52,22 +52,23 @@ const ShimmerMaterial = shaderMaterial(
 );
 extend({ ShimmerMaterial });
 
-const photoFilePaths = Object.keys(
-  import.meta.glob('../../public/photos/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: false })
-);
+const photosGlob = import.meta.glob('../assets/photos/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' });
 
-const photoFiles = photoFilePaths
-  .map((filePath) => filePath.split('/').pop())
-  .filter((fileName): fileName is string => Boolean(fileName))
+const photoFiles = Object.entries(photosGlob)
+  .map(([path, url]) => {
+    const fileName = path.split('/').pop();
+    return { fileName, url: url as string };
+  })
+  .filter((item): item is { fileName: string; url: string } => Boolean(item.fileName))
   .sort((a, b) => {
-    const aNum = Number.parseInt(a.split('.')[0], 10);
-    const bNum = Number.parseInt(b.split('.')[0], 10);
+    const aNum = Number.parseInt(a.fileName!.split('.')[0], 10);
+    const bNum = Number.parseInt(b.fileName!.split('.')[0], 10);
     const aIsNum = Number.isFinite(aNum);
     const bIsNum = Number.isFinite(bNum);
     if (aIsNum && bIsNum) return aNum - bNum;
     if (aIsNum) return -1;
     if (bIsNum) return 1;
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    return a.fileName!.localeCompare(b.fileName!, undefined, { numeric: true, sensitivity: 'base' });
   });
 
 // --- Photo Component ---
@@ -181,7 +182,7 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
     const photos: ParticleData[] = [];
 
     for (let i = 0; i < photoCount; i++) {
-      const fileName = photoFiles[i];
+      const { fileName, url } = photoFiles[i];
       const timeMatch = /^(\d{4})_(\d{2})_/.exec(fileName);
       const year = timeMatch ? Number.parseInt(timeMatch[1], 10) : undefined;
       const month = timeMatch ? timeMatch[2] : undefined;
@@ -212,7 +213,8 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
       const chaosY = r * Math.sin(phi) * Math.sin(theta) * 0.6; // Y轴压扁一点，形成椭球
       const chaosZ = r * Math.cos(phi);
 
-      const imageUrl = `/photos/${fileName}`;
+      // const imageUrl = `/photos/${fileName}`; // Old manual path
+      const imageUrl = url; // Use the imported URL directly
 
       photos.push({
         id: `photo-${i}`,
