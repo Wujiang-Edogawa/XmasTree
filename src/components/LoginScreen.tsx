@@ -18,6 +18,9 @@ const LoginScreen: React.FC = () => {
         if (code === 'Happy Christmas') {
             setTimeout(() => {
                 setIsCreatorMode(true);
+                // Clear default data for creator mode
+                setPhotos([]); 
+                setLetterContent('');
                 setIsAuthenticated(true);
                 setIsChecking(false);
             }, 800);
