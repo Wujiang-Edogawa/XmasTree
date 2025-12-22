@@ -1,157 +1,91 @@
-# 🎄 Christmas Memories Tree
+# 🎄 Christmas Memories Tree 2.0 (To JOJO Edition)
 
-一个基于 React Three Fiber 的 3D 交互式圣诞树记忆展示项目，通过 AI 手势识别技术，让您的珍贵回忆在魔法般的 3D 空间中呈现。
+> "The best way to spread Christmas cheer is singing loud for all to hear... and sharing memories!"
 
-## ✨ 项目特色
+一个基于 **React Three Fiber** 的 3D 互动式圣诞树平台。不仅仅是一个静态展示页，现在它是一个**每个人都可以创造、定制并分享专属圣诞回忆**的云端平台。
 
-- **3D 交互体验**：使用 Three.js 和 React Three Fiber 构建的沉浸式 3D 场景
-- **AI 手势控制**：集成 MediaPipe 手势识别，支持多种手势交互
-- **双重视图模式**：
-  - **CHAOS 模式**：记忆碎片散落在空间中
-  - **TREE 模式**：记忆按时间轴排列成圣诞树形状
-- **丰富的视觉效果**：水晶装饰、粒子特效、后处理效果
-- **响应式设计**：适配不同屏幕尺寸
+通过 **Supabase** 云端集成，您可以上传照片、书写寄语，并生成独一无二的“魔法咒语”分享给您的朋友。
 
-## 🎮 手势控制
+## ✨ 2.0 版本新特性
 
-### 单手操作
-- **张开手掌**：指针控制，可以点击查看照片
-  - 停留 1 秒触发点击
-  - 进度环会显示悬停进度
-- **握拳**：旋转场景（改变旋转速度）
-- **单指伸出（食指）**：单手缩放控制
-  - 手掌靠近摄像头：放大
-  - 手掌远离摄像头：缩小
+### 🌟 创造者模式 (Creator Mode)
+人人都是圣诞老人！无需编写代码，即可定制您的专属圣诞树。
+*   **云端照片上传**：支持批量上传照片，自动压缩优化，无需担心流量问题。
+*   **信件编辑**：内置所见即所得的信件编辑器，写下您的圣诞祝福。
+*   **咒语生成**：生成一个唯一的“咒语”（Key），如 `LOVE-2025`，这就是打开您圣诞树的钥匙。
 
-### 双手操作
-- **双手张开**：平移视角
-  - 移动双手来移动整个场景
-- **捏合手势（拇指和食指）**：双手缩放
-  - 双手距离变大：放大
-  - 双手距离变小：缩小
-- **双手握拳**：在 CHAOS 和 TREE 模式之间切换
+### 🌍 观看者模式 (Viewer Mode)
+*   **咒语解锁**：访客输入您分享的咒语，即可从云端拉取您定制的照片和信件。
+*   **沉浸体验**：保留了原版所有的 3D 交互、粒子特效和背景音乐。
 
-## 🚀 快速开始
+### 🎮 核心交互
+*   **FORMED 状态**：照片按时间顺序螺旋上升，汇聚成一颗璀璨的圣诞树。
+*   **CHAOS 状态**：记忆碎片如星辰般散落在宇宙中，等待您的探索。
+*   **自动演示**：进入后 6 秒自动“炸开”成 CHAOS 状态，带来视觉震撼。
 
-### 环境要求
+## 🚀 快速上手
 
-- Node.js 16+
-- 现代浏览器（支持 WebGL 和 WebRTC）
+### 1. 创造您的圣诞树
+1.  访问网站首页。
+2.  输入初始密钥：**`Happy Christmas`**。
+3.  点击左下角的 **"Open Editor"**。
+4.  上传照片 -> 写下祝福 -> 输入自定义咒语（例如 `JOJO2025`） -> 点击 **Save & Generate**。
 
-### 安装依赖
+### 2. 分享给朋友
+1.  将网站链接发送给朋友。
+2.  告诉他们咒语：**`JOJO2025`**。
+3.  他们输入咒语后，就能看到您为他们准备的惊喜了！
 
-```bash
-npm install
-```
+## 🛠️ 技术栈
 
-### 开发模式
-
-```bash
-npm run dev
-```
-
-访问 `http://localhost:5173` 查看项目
-
-### 构建生产版本
-
-```bash
-npm run build
-```
-
-### 预览生产版本
-
-```bash
-npm run preview
-```
+*   **前端框架**: React 18, TypeScript, Vite
+*   **3D 引擎**: Three.js, React Three Fiber, Drei
+*   **后端服务 (BaaS)**: Supabase (PostgreSQL + Storage)
+*   **UI/动画**: Tailwind CSS 4, Framer Motion
+*   **部署**: Vercel
 
 ## 📁 项目结构
 
 ```
 christmas-tree/
 ├── src/
-│   ├── App.tsx                      # 主应用组件
-│   ├── types.ts                     # TypeScript 类型定义
+│   ├── App.tsx                      # 主应用逻辑 & 状态管理
+│   ├── supabaseClient.ts            # Supabase 客户端配置
 │   ├── components/
-│   │   ├── Experience.tsx           # 3D 场景主组件
-│   │   ├── TreeSystem.tsx           # 圣诞树系统（粒子、照片球体）
-│   │   ├── CrystalOrnaments.tsx     # 水晶装饰组件
-│   │   ├── GestureInput.tsx         # 手势识别输入
-│   │   └── TechEffects.tsx          # 科技感视觉特效
-│   └── index.css                    # 全局样式
-├── public/
-│   └── photos/                      # 照片存放目录（被 .gitignore 排除）
-├── metadata.json                    # 项目元数据
-└── package.json                     # 项目配置
+│   │   ├── CreatorDashboard.tsx     # [NEW] 创造者模式侧边栏
+│   │   ├── LoginScreen.tsx          # [UPDATED] 登录与咒语验证
+│   │   ├── TreeSystem.tsx           # 3D 圣诞树核心系统
+│   │   ├── Experience.tsx           # 3D 场景容器
+│   │   ├── TechEffects.tsx          # 科技感 HUD 特效
+│   │   └── ...
+│   └── ...
+└── ...
 ```
 
-## 🎨 技术栈
+## 🔧 本地开发
 
-### 核心框架
-- **React 18** - UI 框架
-- **TypeScript** - 类型安全
-- **Vite** - 构建工具
+1.  **克隆项目**
+    ```bash
+    git clone https://github.com/Wujiang-Edogawa/XmasTree.git
+    cd christmas-tree
+    ```
 
-### 3D 渲染
-- **Three.js** - 3D 图形库
-- **@react-three/fiber** - React Three.js 渲染器
-- **@react-three/drei** - Three.js 实用工具集
-- **@react-three/postprocessing** - 后处理效果
+2.  **安装依赖**
+    ```bash
+    npm install
+    ```
 
-### AI 与交互
-- **@mediapipe/tasks-vision** - 手势识别
-- **@use-gesture/react** - 手势处理
-- **framer-motion** - 动画库
+3.  **配置环境变量**
+    在项目根目录创建 `.env.local` 文件，并填入您的 Supabase 配置：
+    ```env
+    VITE_SUPABASE_URL=your_supabase_url
+    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    ```
 
-### 样式
-- **Tailwind CSS 4** - 实用优先的 CSS 框架
-
-## 📸 添加照片
-
-1. 将照片放入 `public/photos/` 目录
-2. 照片命名格式：`YYYY_MM_序号.jpg`（例如：`2024_12_1.jpg`）
-3. 照片会自动按时间排序并在树上显示
-
-> 注意：`public/photos/` 目录下的照片不会被提交到 Git 仓库
-
-## 🎯 使用说明
-
-1. **首次访问**：浏览器会请求摄像头权限，允许后即可使用手势控制
-2. **探索模式**：在 CHAOS 模式下，照片散落在空间中，使用手势旋转和缩放来探索
-3. **时间轴模式**：切换到 TREE 模式，照片会按时间顺序排列成圣诞树形状
-4. **查看照片**：用手掌指针悬停在照片上 1 秒即可查看大图
-5. **关闭照片**：在照片大图上悬停 1 秒即可关闭
-
-## 🛠️ 自定义配置
-
-### 修改照片路径
-
-在 `src/components/TreeSystem.tsx` 中修改 `photoData` 数组。
-
-### 调整手势灵敏度
-
-在 `src/components/GestureInput.tsx` 中调整相关参数。
-
-### 修改视觉效果
-
-在 `src/components/Experience.tsx` 中调整后处理效果参数。
-
-## 🎁 功能亮点
-
-- 实时手势识别，无需触摸屏幕
-- 流畅的 3D 动画和过渡效果
-- 水晶般的粒子特效
-- 梦幻的光标跟随系统
-- 科技感的 UI 界面
-- 时间轴式的记忆展示
-
-## 📝 开发日志
-
-- ✅ 基础 3D 场景搭建
-- ✅ 手势识别集成
-- ✅ 双手控制实现
-- ✅ 单手缩放控制
-- ✅ 时间轴功能
-- ✅ 视觉特效优化
+4.  **启动开发服务器**
+    ```bash
+    npm run dev
+    ```
 
 ## 📄 许可证
 
@@ -159,9 +93,5 @@ MIT License
 
 ## 🙏 致谢
 
-感谢以下开源项目：
-- React Three Fiber
-- Three.js
-- MediaPipe
-- Framer Motion
-- Tailwind CSS
+特别感谢所有为开源社区做出贡献的开发者。
+Merry Christmas! 🎄
