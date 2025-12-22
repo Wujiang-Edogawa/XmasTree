@@ -15,47 +15,40 @@ const BackgroundMusic: React.FC = () => {
         const audio = audioRef.current;
         if (!audio) return;
 
-        // 确保不开启单曲循环，由 React 控制列表循环
         audio.loop = false;
 
         const handleEnded = () => {
             if (!hasTriggeredLetterRef.current) {
-                // 第一次播放结束：弹出信件
                 setIsLetterOpen(true);
                 hasTriggeredLetterRef.current = true;
             }
-            
-            // 切换到下一首
+            // 切换到下一首，但保持 isPlaying 状态
             setCurrentTrackIndex(prev => (prev + 1) % PLAYLIST.length);
         };
 
+        // 当音频源准备好且处于播放状态时，自动播放
+        const handleCanPlay = () => {
+            if (isPlaying) {
+                audio.play().catch(e => console.log("Continue play prevented:", e));
+            }
+        };
+
         audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('canplay', handleCanPlay);
 
         return () => {
             audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('canplay', handleCanPlay);
         };
-    }, [setIsLetterOpen]);
+    }, [setIsLetterOpen, isPlaying]); // 添加 isPlaying 依赖
 
-    // 监听曲目变化，自动播放下一首
-    useEffect(() => {
-        // 只有当已经处于播放状态（或初始自动播放启动后），切歌才自动播放
-        // 我们通过 isPlaying 标记来判断是否应该播放
-        if (isPlaying) {
-            const audio = audioRef.current;
-            if (audio) {
-                // 等待 src 更新后播放
-                // React 的 render 是同步的，DOM 更新后 audio.src 已经变了
-                // 但为了保险，可以稍微延迟一点或者直接播放
-                audio.play().catch(e => console.log("Playlist continue play prevented:", e));
-            }
-        }
-    }, [currentTrackIndex]);
+    // 移除原来的 useEffect [currentTrackIndex]，因为交给 onCanPlay 处理了
 
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
-        audio.volume = 0.5; // 设置默认音量
+        audio.volume = 0.5;
 
         const tryPlay = async () => {
             try {
@@ -63,19 +56,25 @@ const BackgroundMusic: React.FC = () => {
                 setIsPlaying(true);
             } catch (error) {
                 console.log("Autoplay prevented:", error);
+                // 不要在这里设置 setIsPlaying(false)，因为我们希望它在用户交互后自动恢复
+                // 保持 isPlaying 为 false (初始状态) 或者 true (如果我们希望它是“试图播放”的状态)
+                // 这里保持 false 比较安全，等待用户交互
                 setIsPlaying(false);
             }
         };
-
-        // 尝试自动播放
+        
+        // 只有首次加载尝试播放
         tryPlay();
 
-        // 监听交互以恢复播放
         const handleInteraction = () => {
             if (audio.paused) {
-                tryPlay();
+                audio.play()
+                    .then(() => setIsPlaying(true))
+                    .catch(e => console.log("Interaction play failed:", e));
             }
         };
+        
+        // ... (保持后面的交互监听代码)
 
         // 监听页面可见性变化 (针对移动端切后台)
         const handleVisibilityChange = () => {
