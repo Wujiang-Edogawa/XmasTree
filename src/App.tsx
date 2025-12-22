@@ -91,6 +91,17 @@ const AppContent: React.FC = () => {
         zoomOffsetRef.current = zoomOffset;
     }, [zoomOffset]);
 
+    // 初始进入 Tree 状态，6秒后自动切换到 Chaos，之后不再自动切换
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        const timer = setTimeout(() => {
+            setState('CHAOS');
+        }, 6000); // 6秒后切换
+
+        return () => clearTimeout(timer);
+    }, [isAuthenticated, setState]);
+
     const toggleState = () => {
         setState(state === 'CHAOS' ? 'FORMED' : 'CHAOS');
     };
@@ -232,7 +243,7 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const [state, setState] = useState<AppState>('CHAOS');
+    const [state, setState] = useState<AppState>('FORMED');
     const [rotationSpeed, setRotationSpeed] = useState<number>(0.1); // 降低基础旋转速度 (0.3 -> 0.1)
     const [pointer, setPointer] = useState<PointerCoords | null>(null);
     const [clickTrigger, setClickTrigger] = useState<number>(0);

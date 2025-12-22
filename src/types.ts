@@ -10,7 +10,7 @@ export interface PointerCoords {
 
 export interface TreeContextType {
   state: AppState;
-  setState: (state: AppState) => void;
+  setState: Dispatch<SetStateAction<AppState>>;
   rotationSpeed: number;
   setRotationSpeed: (speed: number) => void;
 
