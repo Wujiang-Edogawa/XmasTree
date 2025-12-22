@@ -34,11 +34,8 @@ const TechEffects: React.FC = () => {
         </div>
 
         {/* HUD 文字指示器 */}
-        <div className="absolute top-6 left-32 text-cyan-400/60 font-mono text-[10px] tracking-wider">
-          SYSTEM ACTIVE
-        </div>
         <div className="absolute top-6 right-32 text-cyan-400/60 font-mono text-[10px] tracking-wider">
-          INPUT READY
+          To JOJO
         </div>
       </div>
 
