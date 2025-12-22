@@ -108,6 +108,34 @@ const CreatorDashboard: React.FC = () => {
         }
     };
 
+    const handleDeleteTree = async () => {
+        if (!spellKey) return;
+        
+        const confirmStr = prompt(`Type "${spellKey}" to confirm deletion of this magic tree:`);
+        if (confirmStr !== spellKey) {
+            if (confirmStr) alert('Incorrect spell key. Deletion cancelled.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const { error } = await supabase
+                .from('christmas_trees')
+                .delete()
+                .eq('spell_key', spellKey);
+
+            if (error) throw error;
+
+            alert('Tree deleted successfully! The magic has faded...');
+            window.location.reload(); // Refresh to reset state
+        } catch (err: any) {
+            console.error(err);
+            setSaveMessage('Error deleting: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div 
             onPointerDown={(e) => e.stopPropagation()} 
@@ -129,67 +157,81 @@ const CreatorDashboard: React.FC = () => {
                         initial={{ x: -400, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: -400, opacity: 0 }}
-                        className="fixed top-0 left-0 h-full w-80 bg-black/80 backdrop-blur-xl z-[150] p-6 border-r border-white/10 overflow-y-auto text-white shadow-2xl pointer-events-auto"
+                        className="fixed top-0 left-0 h-full w-80 bg-black/80 backdrop-blur-xl z-[150] p-6 border-r border-white/10 overflow-y-auto text-white shadow-2xl pointer-events-auto flex flex-col"
                     >
-                        <h2 className="text-2xl cinzel font-bold text-amber-400 mb-6">Create Magic</h2>
+                        <div className="flex-1">
+                            <h2 className="text-2xl cinzel font-bold text-amber-400 mb-6">Create Magic</h2>
 
-                        {/* Photo Upload */}
-                        <div className="mb-8">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">1. Add Memories</h3>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={handlePhotoUpload}
-                                className="hidden"
-                                id="photo-upload"
-                            />
-                            <label
-                                htmlFor="photo-upload"
-                                className={`block w-full text-center py-3 border-2 border-dashed border-white/30 rounded-lg cursor-pointer hover:border-amber-400 hover:text-amber-400 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
-                            >
-                                {uploading ? 'Uploading...' : '+ Upload Photos'}
-                            </label>
-                            <div className="mt-2 flex justify-between items-center text-xs text-gray-500">
-                                <span>{photos.length} photos added</span>
-                                <button onClick={handleClearPhotos} className="text-red-400 hover:text-red-300">Clear All</button>
+                            {/* Photo Upload */}
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">1. Add Memories</h3>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handlePhotoUpload}
+                                    className="hidden"
+                                    id="photo-upload"
+                                />
+                                <label
+                                    htmlFor="photo-upload"
+                                    className={`block w-full text-center py-3 border-2 border-dashed border-white/30 rounded-lg cursor-pointer hover:border-amber-400 hover:text-amber-400 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+                                >
+                                    {uploading ? 'Uploading...' : '+ Upload Photos'}
+                                </label>
+                                <div className="mt-2 flex justify-between items-center text-xs text-gray-500">
+                                    <span>{photos.length} photos added</span>
+                                    <button onClick={handleClearPhotos} className="text-red-400 hover:text-red-300">Clear All</button>
+                                </div>
+                            </div>
+
+                            {/* Letter Editor */}
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">2. Write a Letter</h3>
+                                <textarea
+                                    value={letterContent}
+                                    onChange={(e) => setLetterContent(e.target.value)}
+                                    placeholder="Write your Christmas wish..."
+                                    className="w-full h-40 bg-white/5 border border-white/10 rounded-lg p-3 text-sm focus:border-amber-400 focus:outline-none resize-none"
+                                />
+                            </div>
+
+                            {/* Save & Publish */}
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">3. Cast Spell</h3>
+                                <input
+                                    type="text"
+                                    value={spellKey}
+                                    onChange={(e) => setSpellKey(e.target.value)}
+                                    placeholder="Enter a magic word (e.g. LOVE2025)"
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm mb-3 focus:border-amber-400 focus:outline-none"
+                                />
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving || uploading}
+                                    className="w-full bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold py-3 rounded-lg hover:from-amber-500 hover:to-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {saving ? 'Casting Spell...' : 'Save & Generate'}
+                                </button>
+                                {saveMessage && (
+                                    <p className={`mt-3 text-sm text-center ${saveMessage.includes('Success') ? 'text-green-400' : 'text-red-400'}`}>
+                                        {saveMessage}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
-                        {/* Letter Editor */}
-                        <div className="mb-8">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">2. Write a Letter</h3>
-                            <textarea
-                                value={letterContent}
-                                onChange={(e) => setLetterContent(e.target.value)}
-                                placeholder="Write your Christmas wish..."
-                                className="w-full h-40 bg-white/5 border border-white/10 rounded-lg p-3 text-sm focus:border-amber-400 focus:outline-none resize-none"
-                            />
-                        </div>
-
-                        {/* Save & Publish */}
-                        <div className="mb-8">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">3. Cast Spell</h3>
-                            <input
-                                type="text"
-                                value={spellKey}
-                                onChange={(e) => setSpellKey(e.target.value)}
-                                placeholder="Enter a magic word (e.g. LOVE2025)"
-                                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm mb-3 focus:border-amber-400 focus:outline-none"
-                            />
-                            <button
-                                onClick={handleSave}
-                                disabled={saving || uploading}
-                                className="w-full bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold py-3 rounded-lg hover:from-amber-500 hover:to-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        {/* Delete Zone */}
+                        <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center opacity-50 hover:opacity-100 transition-opacity">
+                            <span className="text-xs text-gray-500">Danger Zone</span>
+                            <button 
+                                onClick={handleDeleteTree}
+                                disabled={!spellKey || saving}
+                                className="text-xs text-red-500 hover:text-red-400 underline disabled:opacity-30 disabled:no-underline"
                             >
-                                {saving ? 'Casting Spell...' : 'Save & Generate'}
+                                Delete this Tree
                             </button>
-                            {saveMessage && (
-                                <p className={`mt-3 text-sm text-center ${saveMessage.includes('Success') ? 'text-green-400' : 'text-red-400'}`}>
-                                    {saveMessage}
-                                </p>
-                            )}
                         </div>
                     </motion.div>
                 )}
