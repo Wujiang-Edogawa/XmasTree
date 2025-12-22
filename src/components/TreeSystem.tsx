@@ -275,7 +275,10 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
       // 2. 遍历所有照片，计算屏幕空间距离
       let closestPhotoId: string | null = null;
       let minDistance = Infinity;
-      const SELECTION_THRESHOLD = 0.05; // Reduced from 0.15 to 0.05 for higher precision
+      
+      // 增加触摸屏的点击判定范围 (0.05 -> 0.08)
+      // 0.05 在桌面端比较精准，但在手机端可能太小了，导致手指很难点中
+      const SELECTION_THRESHOLD = 0.08; 
 
       photoObjects.forEach(obj => {
         if (!obj.ref.current) return;
@@ -306,7 +309,8 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
         const screenPos = starPos.clone().project(camera);
         if (screenPos.z < 1) {
           const dist = Math.hypot(screenPos.x - ndcX, screenPos.y - ndcY);
-          if (dist < SELECTION_THRESHOLD * 1.5) { // 稍微大一点的判定范围
+          // 增加触摸屏的判定范围
+          if (dist < SELECTION_THRESHOLD * 2.0) {
              setIsLetterOpen(true);
              return;
           }
