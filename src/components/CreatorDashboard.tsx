@@ -22,9 +22,7 @@ const CreatorDashboard: React.FC = () => {
         setUploading(true);
 
         const files = Array.from(e.target.files);
-        const newPhotos = [...photos];
-
-        for (const file of files) {
+        const uploadPromises = files.map(async (file) => {
             try {
                 // 1. Compress
                 const options = {
@@ -48,15 +46,36 @@ const CreatorDashboard: React.FC = () => {
                 // 3. Get Public URL
                 const { data } = supabase.storage.from('photos').getPublicUrl(filePath);
                 
-                newPhotos.push({ url: data.publicUrl, fileName: file.name });
-            } catch (error) {
-                console.error('Error uploading file:', error);
+                return { status: 'fulfilled', value: { url: data.publicUrl, fileName: file.name } };
+            } catch (error: any) {
+                console.error(`Error uploading ${file.name}:`, error);
+                return { status: 'rejected', reason: error.message, fileName: file.name };
             }
+        });
+
+        const results = await Promise.all(uploadPromises);
+        
+        const successfulUploads = results
+            .filter((r): r is { status: 'fulfilled'; value: { url: string; fileName: string } } => r.status === 'fulfilled')
+            .map(r => r.value);
+            
+        const failedUploads = results
+            .filter((r): r is { status: 'rejected'; reason: string; fileName: string } => r.status === 'rejected');
+
+        if (successfulUploads.length > 0) {
+            setPhotos(prev => [...prev, ...successfulUploads]);
         }
 
-        setPhotos(newPhotos);
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
+
+        // Feedback
+        if (failedUploads.length > 0) {
+            alert(`Uploaded ${successfulUploads.length} photos. Failed to upload ${failedUploads.length} photos:\n${failedUploads.map(f => `- ${f.fileName}: ${f.reason}`).join('\n')}`);
+        } else if (successfulUploads.length > 0) {
+            // Optional: Toast for complete success
+            console.log(`Successfully uploaded all ${successfulUploads.length} photos.`);
+        }
     };
 
     const handleSave = async () => {
