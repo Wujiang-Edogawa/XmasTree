@@ -76,7 +76,8 @@ const Experience: React.FC = () => {
       <Sparkles count={100} scale={18} size={2} speed={0.7} opacity={0.4} color="#ff6b6b" />
       <Sparkles count={100} scale={18} size={2} speed={0.65} opacity={0.4} color="#4ecdc4" />
 
-      <Environment preset="city" environmentIntensity={0.5} />
+      {/* 使用本地 HDR 文件，避免 CDN 加载失败 */}
+      <Environment files="/potsdamer_platz_1k.hdr" environmentIntensity={0.5} />
 
       {/* Main Content */}
       <group position={[0, -2, 0]}>
