@@ -77,7 +77,7 @@ const PhotoModal: React.FC<{ url: string | null, onClose: () => void }> = ({ url
 }
 
 const AppContent: React.FC = () => {
-    const { state, setState, pointer, setPointer, selectedPhotoUrl, setSelectedPhotoUrl, setClickTrigger, zoomOffset, setZoomOffset, isAuthenticated, isLetterOpen } = useContext(TreeContext) as TreeContextType;
+    const { state, setState, pointer, setPointer, selectedPhotoUrl, setSelectedPhotoUrl, setClickTrigger, zoomOffset, setZoomOffset, isAuthenticated, isLetterOpen, isCreatorMode } = useContext(TreeContext) as TreeContextType;
     const [showSettings, setShowSettings] = useState(false);
     
     // 始终执行 Hooks (不能放在条件判断之后)
@@ -273,11 +273,11 @@ const App: React.FC = () => {
 
     // Initial Load: Load default photos if no custom tree is loaded yet
     useEffect(() => {
-        if (photos.length === 0 && !treeId) {
+        if (photos.length === 0 && !treeId && !isCreatorMode) {
             const defaults = loadDefaultPhotos();
             setPhotos(defaults);
         }
-    }, [treeId]);
+    }, [treeId, isCreatorMode]);
 
     // Load default letter
     useEffect(() => {

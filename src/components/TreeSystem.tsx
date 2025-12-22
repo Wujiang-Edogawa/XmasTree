@@ -159,65 +159,67 @@ const PolaroidPhoto: React.FC<{ url: string; position: THREE.Vector3; rotation: 
     for (let i = 0; i < lightCount * 3; i++) lightChaos[i] = lSphere[i];
     for (let i = 0; i < lightCount; i++) { const i3 = i * 3; const t = i / lightCount; const h = t * 13; const coneRadius = (14 - h) * 0.48; const angle = t * Math.PI * 25; lightTree[i3] = Math.cos(angle) * coneRadius; lightTree[i3 + 1] = h - 6; lightTree[i3 + 2] = Math.sin(angle) * coneRadius; }
 
-    const photoCount = photos.length;
+    const photoCount = photos?.length || 0;
     const photoParticles: ParticleData[] = [];
 
-    for (let i = 0; i < photoCount; i++) {
-      const { fileName, url } = photos[i];
-      let year: number | undefined;
-      let month: string | undefined;
-      
-      if (fileName) {
-        const timeMatch = /^(\d{4})_(\d{2})_/.exec(fileName);
-        year = timeMatch ? Number.parseInt(timeMatch[1], 10) : undefined;
-        month = timeMatch ? timeMatch[2] : undefined;
+    if (photoCount > 0) {
+      for (let i = 0; i < photoCount; i++) {
+        const { fileName, url } = photos[i];
+        let year: number | undefined;
+        let month: string | undefined;
+        
+        if (fileName) {
+          const timeMatch = /^(\d{4})_(\d{2})_/.exec(fileName);
+          year = timeMatch ? Number.parseInt(timeMatch[1], 10) : undefined;
+          month = timeMatch ? timeMatch[2] : undefined;
+        }
+  
+        // --- FORMED: Time Spiral Layout ---
+        // 螺旋上升: i 越大 (越新)，h 越高
+        const t = photoCount > 1 ? i / (photoCount - 1) : 0.5;
+        const h = t * 12 - 6; // 高度范围 -6 到 6 (稍微收缩一点，让两端不那么突兀)
+        // 让照片悬浮在树的外围，形成环绕带
+        const radius = (10 - h) * 0.6 + 4.5; // 半径加大，确保在树叶外侧
+        const angle = t * Math.PI * 8; // 螺旋圈数 (4圈)
+  
+        const treeX = Math.cos(angle) * radius;
+        const treeY = h;
+        const treeZ = Math.sin(angle) * radius;
+  
+        // --- CHAOS: Fibonacci Sphere Layout (Even Distribution) ---
+        // 使用斐波那契球体分布，确保照片均匀分布，减少重叠
+  
+        // 黄金角度
+        const phi = Math.acos(1 - 2 * (i + 0.5) / photoCount);
+        const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
+  
+        // 基础半径 (稍微随机化一点，避免完全在一个球面上)
+        const r = 12 + Math.random() * 4;
+  
+        const chaosX = r * Math.sin(phi) * Math.cos(theta);
+        const chaosY = r * Math.sin(phi) * Math.sin(theta) * 0.6; // Y轴压扁一点，形成椭球
+        const chaosZ = r * Math.cos(phi);
+  
+        const imageUrl = url; 
+  
+        photoParticles.push({
+          id: `photo-${i}`,
+          type: 'PHOTO',
+          year: year,
+          month: month,
+          chaosPos: [chaosX, chaosY, chaosZ],
+          treePos: [treeX, treeY, treeZ],
+          chaosRot: [
+            (Math.random() - 0.5) * 0.2, // X: 微小随机倾斜
+            0 + (Math.random() - 0.5) * 0.2, // Y: 正面朝向 (0) + 微扰
+            (Math.random() - 0.5) * 0.1 // Z: 微小倾斜
+          ],
+          treeRot: [0, -angle + Math.PI / 2, 0], // 面向外
+          scale: 0.9 + Math.random() * 0.3,
+          image: imageUrl,
+          color: 'white'
+        });
       }
-
-      // --- FORMED: Time Spiral Layout ---
-      // 螺旋上升: i 越大 (越新)，h 越高
-      const t = photoCount > 1 ? i / (photoCount - 1) : 0.5;
-      const h = t * 12 - 6; // 高度范围 -6 到 6 (稍微收缩一点，让两端不那么突兀)
-      // 让照片悬浮在树的外围，形成环绕带
-      const radius = (10 - h) * 0.6 + 4.5; // 半径加大，确保在树叶外侧
-      const angle = t * Math.PI * 8; // 螺旋圈数 (4圈)
-
-      const treeX = Math.cos(angle) * radius;
-      const treeY = h;
-      const treeZ = Math.sin(angle) * radius;
-
-      // --- CHAOS: Fibonacci Sphere Layout (Even Distribution) ---
-      // 使用斐波那契球体分布，确保照片均匀分布，减少重叠
-
-      // 黄金角度
-      const phi = Math.acos(1 - 2 * (i + 0.5) / photoCount);
-      const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
-
-      // 基础半径 (稍微随机化一点，避免完全在一个球面上)
-      const r = 12 + Math.random() * 4;
-
-      const chaosX = r * Math.sin(phi) * Math.cos(theta);
-      const chaosY = r * Math.sin(phi) * Math.sin(theta) * 0.6; // Y轴压扁一点，形成椭球
-      const chaosZ = r * Math.cos(phi);
-
-      const imageUrl = url; 
-
-      photoParticles.push({
-        id: `photo-${i}`,
-        type: 'PHOTO',
-        year: year,
-        month: month,
-        chaosPos: [chaosX, chaosY, chaosZ],
-        treePos: [treeX, treeY, treeZ],
-        chaosRot: [
-          (Math.random() - 0.5) * 0.2, // X: 微小随机倾斜
-          0 + (Math.random() - 0.5) * 0.2, // Y: 正面朝向 (0) + 微扰
-          (Math.random() - 0.5) * 0.1 // Z: 微小倾斜
-        ],
-        treeRot: [0, -angle + Math.PI / 2, 0], // 面向外
-        scale: 0.9 + Math.random() * 0.3,
-        image: imageUrl,
-        color: 'white'
-      });
     }
     return { foliageData: { current: foliage, chaos: foliageChaos, tree: foliageTree, sizes }, photosData: photoParticles, lightsData: { chaos: lightChaos, tree: lightTree, count: lightCount } };
   }, [photos]);
