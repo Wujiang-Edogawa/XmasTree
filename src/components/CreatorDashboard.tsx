@@ -7,13 +7,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CreatorDashboard: React.FC = () => {
-    const { photos, setPhotos, letterContent, setLetterContent, isCreatorMode } = useContext(TreeContext) as TreeContextType;
+    const { photos, setPhotos, letterContent, setLetterContent, isCreatorMode, selectedMusic, setSelectedMusic } = useContext(TreeContext) as TreeContextType;
     const [isOpen, setIsOpen] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [spellKey, setSpellKey] = useState('');
     const [saveMessage, setSaveMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const AVAILABLE_MUSIC = [
+        { label: 'Jingle Bells (Default)', value: '/music/bgm.mp3' },
+        { label: 'Silent Night', value: '/music/bgm2.mp3' },
+    ];
 
     if (!isCreatorMode) return null;
 
@@ -63,7 +68,7 @@ const CreatorDashboard: React.FC = () => {
             .filter((r): r is { status: 'rejected'; reason: string; fileName: string } => r.status === 'rejected');
 
         if (successfulUploads.length > 0) {
-            setPhotos(prev => [...prev, ...successfulUploads]);
+            setPhotos([...photos, ...successfulUploads]);
         }
 
         setUploading(false);
@@ -107,7 +112,7 @@ const CreatorDashboard: React.FC = () => {
                     creator_name: 'Santa Helper', // Could be dynamic
                     photo_urls: photos.map(p => p.url),
                     letter_content: letterContent,
-                    music_id: 'default' // TODO
+                    music_id: selectedMusic // Save selected music path
                 });
 
             if (error) throw error;
@@ -216,9 +221,58 @@ const CreatorDashboard: React.FC = () => {
                                 />
                             </div>
 
+                            {/* Music Selector */}
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">3. Choose Music</h3>
+                                
+                                {/* Music Upload Button */}
+                                <input
+                                    ref={musicInputRef}
+                                    type="file"
+                                    accept="audio/*"
+                                    onChange={handleMusicUpload}
+                                    className="hidden"
+                                    id="music-upload"
+                                />
+                                <label
+                                    htmlFor="music-upload"
+                                    className={`block w-full text-center py-2 mb-3 border border-dashed border-white/20 rounded hover:border-amber-400 hover:text-amber-400 transition-colors cursor-pointer text-xs uppercase tracking-widest ${musicUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                                >
+                                    {musicUploading ? 'Uploading Music...' : '+ Upload Custom Music'}
+                                </label>
+
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                    {[...AVAILABLE_MUSIC, ...uploadedMusicList].map((music, idx) => (
+                                        <label 
+                                            key={`${music.value}-${idx}`} 
+                                            className={`
+                                                flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all
+                                                ${selectedMusic === music.value 
+                                                    ? 'bg-amber-500/20 border-amber-500 text-amber-200' 
+                                                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                                                }
+                                            `}
+                                        >
+                                            <div className="flex items-center overflow-hidden">
+                                                <input
+                                                    type="radio"
+                                                    name="bgm"
+                                                    value={music.value}
+                                                    checked={selectedMusic === music.value}
+                                                    onChange={(e) => setSelectedMusic(e.target.value)}
+                                                    className="hidden"
+                                                />
+                                                <span className="text-sm truncate mr-2">{music.label}</span>
+                                            </div>
+                                            {selectedMusic === music.value && <span className="text-xs shrink-0">🎵</span>}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Save & Publish */}
                             <div className="mb-8">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">3. Cast Spell</h3>
+                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">4. Cast Spell</h3>
                                 <input
                                     type="text"
                                     value={spellKey}
