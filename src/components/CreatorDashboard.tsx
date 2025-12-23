@@ -14,11 +14,39 @@ const CreatorDashboard: React.FC = () => {
     const [spellKey, setSpellKey] = useState('');
     const [saveMessage, setSaveMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const musicInputRef = useRef<HTMLInputElement>(null);
+    const [uploadedMusicList, setUploadedMusicList] = useState<{ label: string; value: string }[]>([]);
+    const [musicUploading, setMusicUploading] = useState(false);
 
     const AVAILABLE_MUSIC = [
         { label: 'Jingle Bells (Default)', value: '/music/bgm.mp3' },
         { label: 'Silent Night', value: '/music/bgm2.mp3' },
     ];
+
+    // Load cloud music library on init
+    React.useEffect(() => {
+        if (!isCreatorMode) return;
+        const fetchCloudMusic = async () => {
+            try {
+                const { data, error } = await supabase.storage.from('music').list();
+                if (error) {
+                    // Bucket might not exist, ignore quietly or log
+                    console.log('Music bucket info:', error.message);
+                    return;
+                }
+                if (data && data.length > 0) {
+                    const cloudMusic = data.map(file => {
+                        const { data: urlData } = supabase.storage.from('music').getPublicUrl(file.name);
+                        return { label: file.name, value: urlData.publicUrl };
+                    });
+                    setUploadedMusicList(cloudMusic);
+                }
+            } catch (e) {
+                console.error("Error fetching cloud music:", e);
+            }
+        };
+        fetchCloudMusic();
+    }, [isCreatorMode]);
 
     if (!isCreatorMode) return null;
 
@@ -80,6 +108,41 @@ const CreatorDashboard: React.FC = () => {
         } else if (successfulUploads.length > 0) {
             // Optional: Toast for complete success
             console.log(`Successfully uploaded all ${successfulUploads.length} photos.`);
+        }
+    };
+
+    const handleMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        setMusicUploading(true);
+        const file = e.target.files[0];
+        
+        try {
+            // 1. Upload to Supabase 'music' bucket
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${uuidv4()}.${fileExt}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('music') 
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            // 2. Get Public URL
+            const { data } = supabase.storage.from('music').getPublicUrl(fileName);
+            
+            const newMusic = { label: file.name, value: data.publicUrl };
+            
+            // 3. Update State
+            setUploadedMusicList(prev => [...prev, newMusic]);
+            setSelectedMusic(newMusic.value); // Auto-select uploaded music
+            
+            console.log('Music uploaded successfully:', newMusic);
+        } catch (error: any) {
+            console.error('Error uploading music:', error);
+            alert(`Failed to upload music. Please ensure a public storage bucket named 'music' exists in your Supabase project.\nError: ${error.message}`);
+        } finally {
+            setMusicUploading(false);
+            if (musicInputRef.current) musicInputRef.current.value = '';
         }
     };
 
