@@ -266,6 +266,7 @@ const App: React.FC = () => {
     const [photos, setPhotos] = useState<{ url: string; fileName?: string }[]>([]);
     const [isLetterOpen, setIsLetterOpen] = useState(false);
     const [letterContent, setLetterContent] = useState('');
+    const [selectedMusic, setSelectedMusic] = useState<string[]>([]);
 
     useEffect(() => {
         localStorage.setItem('christmas_secret_key', secretKey);
@@ -304,7 +305,8 @@ const App: React.FC = () => {
             // New Context Props
             photos, setPhotos,
             isCreatorMode, setIsCreatorMode,
-            treeId, setTreeId
+            treeId, setTreeId,
+            selectedMusic, setSelectedMusic
         }}>
             <AppContent />
         </TreeContext.Provider>

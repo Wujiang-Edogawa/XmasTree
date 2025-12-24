@@ -47,6 +47,8 @@ export interface TreeContextType {
   setIsCreatorMode: (isCreator: boolean) => void;
   treeId: string | null;
   setTreeId: (id: string | null) => void;
+  selectedMusic: string[];
+  setSelectedMusic: (url: string[]) => void;
 }
 
 export interface ParticleData {

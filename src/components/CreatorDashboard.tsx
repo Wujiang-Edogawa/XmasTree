@@ -37,7 +37,26 @@ const CreatorDashboard: React.FC = () => {
                 if (data && data.length > 0) {
                     const cloudMusic = data.map(file => {
                         const { data: urlData } = supabase.storage.from('music').getPublicUrl(file.name);
-                        return { label: file.name, value: urlData.publicUrl };
+                        
+                        // Parse label from filename: Remove UUID prefix if present
+                        // Format: UUID_OriginalName (OriginalName might be URI encoded)
+                        let label = file.name;
+                        const parts = file.name.split('_');
+                        if (parts.length > 1) {
+                            // Validate if first part is UUID-like (simple check)
+                            if (parts[0].length === 36) {
+                                try {
+                                    // Try to decode URI component in case it was encoded
+                                    const rawName = parts.slice(1).join('_');
+                                    label = decodeURIComponent(rawName);
+                                } catch (e) {
+                                    // Fallback if decoding fails (e.g. not encoded)
+                                    label = parts.slice(1).join('_');
+                                }
+                            }
+                        }
+
+                        return { label: label, value: urlData.publicUrl, fileName: file.name };
                     });
                     setUploadedMusicList(cloudMusic);
                 }
@@ -118,8 +137,7 @@ const CreatorDashboard: React.FC = () => {
         
         try {
             // 1. Upload to Supabase 'music' bucket
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${uuidv4()}.${fileExt}`;
+            const fileName = `${uuidv4()}_${encodeURIComponent(file.name)}`;
             
             const { error: uploadError } = await supabase.storage
                 .from('music') 
@@ -134,7 +152,7 @@ const CreatorDashboard: React.FC = () => {
             
             // 3. Update State
             setUploadedMusicList(prev => [...prev, newMusic]);
-            setSelectedMusic(newMusic.value); // Auto-select uploaded music
+            setSelectedMusic([...selectedMusic, newMusic.value]); // Add uploaded music to selection
             
             console.log('Music uploaded successfully:', newMusic);
         } catch (error: any) {
@@ -223,6 +241,42 @@ const CreatorDashboard: React.FC = () => {
         }
     };
 
+    const handleDeleteMusic = async (musicToDelete: { label: string; value: string; fileName?: string }) => {
+        if (!musicToDelete.fileName) return; // Cannot delete default music or items without filename
+        
+        if (!window.confirm(`Are you sure you want to delete "${musicToDelete.label}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            // 1. Delete from Supabase
+            const { error } = await supabase.storage.from('music').remove([musicToDelete.fileName]);
+            
+            if (error) throw error;
+
+            // 2. Remove from uploaded list
+            setUploadedMusicList(prev => prev.filter(m => m.value !== musicToDelete.value));
+
+            // 3. Remove from selection if selected
+            if (selectedMusic.includes(musicToDelete.value)) {
+                setSelectedMusic(selectedMusic.filter(m => m !== musicToDelete.value));
+            }
+
+            console.log('Music deleted successfully:', musicToDelete.label);
+        } catch (error: any) {
+            console.error('Error deleting music:', error);
+            alert(`Failed to delete music: ${error.message}`);
+        }
+    };
+
+    const toggleMusicSelection = (url: string) => {
+        if (selectedMusic.includes(url)) {
+            setSelectedMusic(selectedMusic.filter(m => m !== url));
+        } else {
+            setSelectedMusic([...selectedMusic, url]);
+        }
+    };
+
     return (
         <div 
             onPointerDown={(e) => e.stopPropagation()} 
@@ -305,31 +359,50 @@ const CreatorDashboard: React.FC = () => {
                                 </label>
 
                                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                                    {[...AVAILABLE_MUSIC, ...uploadedMusicList].map((music, idx) => (
-                                        <label 
-                                            key={`${music.value}-${idx}`} 
-                                            className={`
-                                                flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all
-                                                ${selectedMusic === music.value 
-                                                    ? 'bg-amber-500/20 border-amber-500 text-amber-200' 
-                                                    : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                                                }
-                                            `}
-                                        >
-                                            <div className="flex items-center overflow-hidden">
-                                                <input
-                                                    type="radio"
-                                                    name="bgm"
-                                                    value={music.value}
-                                                    checked={selectedMusic === music.value}
-                                                    onChange={(e) => setSelectedMusic(e.target.value)}
-                                                    className="hidden"
-                                                />
-                                                <span className="text-sm truncate mr-2">{music.label}</span>
+                                    {[...AVAILABLE_MUSIC, ...uploadedMusicList].map((music, idx) => {
+                                        const isSelected = selectedMusic.includes(music.value);
+                                        // Check if this is a custom uploaded music (has fileName property)
+                                        const isUploaded = 'fileName' in music;
+
+                                        return (
+                                            <div key={`${music.value}-${idx}`} className="relative mb-2">
+                                                <label 
+                                                    className={`
+                                                        flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all
+                                                        ${isSelected 
+                                                            ? 'bg-amber-500/20 border-amber-500 text-amber-200' 
+                                                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                                                        }
+                                                    `}
+                                                >
+                                                    <div className="flex items-center overflow-hidden pr-6">
+                                                        <input
+                                                            type="checkbox"
+                                                            value={music.value}
+                                                            checked={isSelected}
+                                                            onChange={() => toggleMusicSelection(music.value)}
+                                                            className="hidden"
+                                                        />
+                                                        <span className="text-sm truncate mr-2">{music.label}</span>
+                                                    </div>
+                                                    {isSelected && <span className="text-xs shrink-0">🎵</span>}
+                                                </label>
+                                                
+                                                {isUploaded && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteMusic(music as any);
+                                                        }}
+                                                        className="absolute top-0 right-0 h-full px-3 text-red-400/50 hover:text-red-400 hover:bg-red-500/10 rounded-r-lg transition-all flex items-center justify-center"
+                                                        title="Delete this music"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
                                             </div>
-                                            {selectedMusic === music.value && <span className="text-xs shrink-0">🎵</span>}
-                                        </label>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
 

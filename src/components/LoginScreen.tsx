@@ -4,7 +4,7 @@ import { TreeContext, TreeContextType } from '../types';
 import { supabase } from '../supabaseClient';
 
 const LoginScreen: React.FC = () => {
-    const { setIsAuthenticated, setPhotos, setLetterContent, setIsCreatorMode, setTreeId } = useContext(TreeContext) as TreeContextType;
+    const { setIsAuthenticated, setPhotos, setLetterContent, setIsCreatorMode, setTreeId, setSelectedMusic } = useContext(TreeContext) as TreeContextType;
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
@@ -46,7 +46,22 @@ const LoginScreen: React.FC = () => {
                 setPhotos(data.photo_urls.map((url: string) => ({ url, fileName: undefined })));
             }
             
-            // TODO: Handle music_id if implemented
+            // Handle music_id
+            if (data.music_id) {
+                try {
+                    const parsed = JSON.parse(data.music_id);
+                    if (Array.isArray(parsed)) {
+                        setSelectedMusic(parsed);
+                    } else {
+                        setSelectedMusic([data.music_id]);
+                    }
+                } catch (e) {
+                    // Legacy format: single URL string
+                    setSelectedMusic([data.music_id]);
+                }
+            } else {
+                setSelectedMusic([]);
+            }
 
             setIsAuthenticated(true);
         } catch (err) {

@@ -1,14 +1,26 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import { TreeContext, TreeContextType } from '../types';
 
-const PLAYLIST = ['/music/bgm.mp3', '/music/bgm2.mp3'];
+const DEFAULT_PLAYLIST = ['/music/bgm.mp3', '/music/bgm2.mp3'];
 
 const BackgroundMusic: React.FC = () => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-    const { setIsLetterOpen } = useContext(TreeContext) as TreeContextType;
+    const { setIsLetterOpen, selectedMusic } = useContext(TreeContext) as TreeContextType;
     const hasTriggeredLetterRef = useRef(false);
+
+    // Determine effective playlist
+    const playlist = (selectedMusic && selectedMusic.length > 0) 
+        ? selectedMusic 
+        : DEFAULT_PLAYLIST;
+
+    // Reset index if playlist changes (optional, but good for safety)
+    useEffect(() => {
+        if (currentTrackIndex >= playlist.length) {
+            setCurrentTrackIndex(0);
+        }
+    }, [playlist, currentTrackIndex]);
 
     // 监听播放结束 & 切歌逻辑
     useEffect(() => {
@@ -23,7 +35,7 @@ const BackgroundMusic: React.FC = () => {
                 hasTriggeredLetterRef.current = true;
             }
             // 切换到下一首，但保持 isPlaying 状态
-            setCurrentTrackIndex(prev => (prev + 1) % PLAYLIST.length);
+            setCurrentTrackIndex(prev => (prev + 1) % playlist.length);
         };
 
         // 当音频源准备好且处于播放状态时，自动播放
@@ -40,7 +52,7 @@ const BackgroundMusic: React.FC = () => {
             audio.removeEventListener('ended', handleEnded);
             audio.removeEventListener('canplay', handleCanPlay);
         };
-    }, [setIsLetterOpen, isPlaying]); // 添加 isPlaying 依赖
+    }, [setIsLetterOpen, isPlaying, playlist]); // 添加 isPlaying 和 playlist 依赖
 
     // 移除原来的 useEffect [currentTrackIndex]，因为交给 onCanPlay 处理了
 
@@ -110,7 +122,7 @@ const BackgroundMusic: React.FC = () => {
 
     return (
         <div className="fixed top-6 right-6 z-50 pointer-events-auto">
-            <audio ref={audioRef} src={PLAYLIST[currentTrackIndex]} />
+            <audio ref={audioRef} src={playlist[currentTrackIndex]} />
             <button
                 onClick={togglePlay}
                 className={`
