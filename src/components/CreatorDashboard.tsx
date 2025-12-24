@@ -19,8 +19,8 @@ const CreatorDashboard: React.FC = () => {
     const [musicUploading, setMusicUploading] = useState(false);
 
     const AVAILABLE_MUSIC = [
-        { label: 'Jingle Bells (Default)', value: '/music/bgm.mp3' },
-        { label: 'Silent Night', value: '/music/bgm2.mp3' },
+        { label: 'Laufey - Christmas Dreaming', value: '/music/bgm.mp3' },
+        { label: 'Laufey - Love to Keep Me Warm', value: '/music/bgm2.mp3' },
     ];
 
     // Load cloud music library on init
