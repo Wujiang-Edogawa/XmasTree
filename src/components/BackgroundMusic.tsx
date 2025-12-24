@@ -1,45 +1,14 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import { TreeContext, TreeContextType } from '../types';
 
-const DEFAULT_PLAYLIST = ['/music/bgm.mp3', '/music/bgm2.mp3'];
+const PLAYLIST = ['/music/bgm.mp3', '/music/bgm2.mp3'];
 
 const BackgroundMusic: React.FC = () => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-    const { setIsLetterOpen, selectedMusic } = useContext(TreeContext) as TreeContextType;
+    const { setIsLetterOpen } = useContext(TreeContext) as TreeContextType;
     const hasTriggeredLetterRef = useRef(false);
-
-    // Determine effective playlist
-    // Robust filtering to remove null/undefined/empty strings AND fix double-encoded URLs
-    const validSelected = Array.isArray(selectedMusic) 
-        ? selectedMusic
-            .filter(m => typeof m === 'string' && m.trim().length > 0)
-            .map(m => {
-                try {
-                    // Fix double encoding (e.g. %2520 -> %20)
-                    // If the URL contains %25, it implies double encoding.
-                    // We try to decode it to get the standard encoded URL.
-                    if (m.includes('%25')) {
-                        return decodeURIComponent(m);
-                    }
-                    return m;
-                } catch (e) {
-                    return m;
-                }
-            })
-        : [];
-
-    const playlist = (validSelected.length > 0) 
-        ? validSelected 
-        : DEFAULT_PLAYLIST;
-
-    // Reset index if playlist changes (optional, but good for safety)
-    useEffect(() => {
-        if (currentTrackIndex >= playlist.length) {
-            setCurrentTrackIndex(0);
-        }
-    }, [playlist, currentTrackIndex]);
 
     // 监听播放结束 & 切歌逻辑
     useEffect(() => {
@@ -54,7 +23,7 @@ const BackgroundMusic: React.FC = () => {
                 hasTriggeredLetterRef.current = true;
             }
             // 切换到下一首，但保持 isPlaying 状态
-            setCurrentTrackIndex(prev => (prev + 1) % playlist.length);
+            setCurrentTrackIndex(prev => (prev + 1) % PLAYLIST.length);
         };
 
         // 当音频源准备好且处于播放状态时，自动播放
@@ -71,7 +40,7 @@ const BackgroundMusic: React.FC = () => {
             audio.removeEventListener('ended', handleEnded);
             audio.removeEventListener('canplay', handleCanPlay);
         };
-    }, [setIsLetterOpen, isPlaying, playlist]); // 添加 isPlaying 和 playlist 依赖
+    }, [setIsLetterOpen, isPlaying]); // 添加 isPlaying 依赖
 
     // 移除原来的 useEffect [currentTrackIndex]，因为交给 onCanPlay 处理了
 
@@ -80,6 +49,8 @@ const BackgroundMusic: React.FC = () => {
         if (!audio) return;
 
         audio.volume = 0.5;
+        // 为移动端友好：初始静音，尝试自动播放，待用户交互后取消静音
+        audio.muted = true;
 
         const tryPlay = async () => {
             try {
@@ -98,6 +69,8 @@ const BackgroundMusic: React.FC = () => {
         tryPlay();
 
         const handleInteraction = () => {
+            // 取消静音，确保移动端在用户交互后可正常发声
+            audio.muted = false;
             if (audio.paused) {
                 audio.play()
                     .then(() => setIsPlaying(true))
@@ -141,10 +114,12 @@ const BackgroundMusic: React.FC = () => {
 
     return (
         <div className="fixed top-6 right-6 z-50 pointer-events-auto">
-            <audio 
-                ref={audioRef} 
-                src={playlist[currentTrackIndex]} 
+            <audio
+                ref={audioRef}
+                src={PLAYLIST[currentTrackIndex]}
                 crossOrigin="anonymous"
+                playsInline
+                preload="metadata"
             />
             <button
                 onClick={togglePlay}
