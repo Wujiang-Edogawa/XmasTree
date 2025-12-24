@@ -26,46 +26,38 @@ const CreatorDashboard: React.FC = () => {
     // Load cloud music library on init
     React.useEffect(() => {
         if (!isCreatorMode) return;
-        const fetchCloudMusic = async () => {
-            try {
-                const { data, error } = await supabase.storage.from('music').list();
-                if (error) {
-                    // Bucket might not exist, ignore quietly or log
-                    console.log('Music bucket info:', error.message);
-                    return;
-                }
-                if (data && data.length > 0) {
-                    const cloudMusic = data.map(file => {
-                        const { data: urlData } = supabase.storage.from('music').getPublicUrl(file.name);
-                        
-                        // Parse label from filename: Remove UUID prefix if present
-                        // Format: UUID_OriginalName (OriginalName might be URI encoded)
-                        let label = file.name;
-                        const parts = file.name.split('_');
-                        if (parts.length > 1) {
-                            // Validate if first part is UUID-like (simple check)
-                            if (parts[0].length === 36) {
-                                try {
-                                    // Try to decode URI component in case it was encoded
-                                    const rawName = parts.slice(1).join('_');
-                                    label = decodeURIComponent(rawName);
-                                } catch (e) {
-                                    // Fallback if decoding fails (e.g. not encoded)
-                                    label = parts.slice(1).join('_');
-                                }
-                            }
-                        }
 
-                        return { label: label, value: urlData.publicUrl, fileName: file.name };
-                    });
-                    setUploadedMusicList(cloudMusic);
-                }
-            } catch (e) {
-                console.error("Error fetching cloud music:", e);
-            }
-        };
-        fetchCloudMusic();
-    }, [isCreatorMode]);
+        // If editing an existing tree, restore its custom music to the list
+        if (selectedMusic && selectedMusic.length > 0) {
+            const customMusic = selectedMusic
+                .filter(url => !AVAILABLE_MUSIC.some(am => am.value === url)) // Filter out default music
+                .map(url => {
+                    // Try to extract filename from URL for label
+                    // Expected format: .../music/UUID_filename.mp3
+                    let label = 'Custom Music';
+                    try {
+                        const parts = url.split('/');
+                        const filename = parts[parts.length - 1];
+                        const nameParts = filename.split('_');
+                        if (nameParts.length > 1) {
+                            label = decodeURIComponent(nameParts.slice(1).join('_'));
+                        } else {
+                            label = filename;
+                        }
+                    } catch (e) {
+                        console.warn("Failed to parse music label", e);
+                    }
+                    return { label, value: url, fileName: undefined }; // fileName undefined means we can't delete it directly from list view easily without more info, but that's okay for now
+                });
+            
+            setUploadedMusicList(prev => {
+                // Merge without duplicates
+                const existingValues = new Set(prev.map(p => p.value));
+                const newItems = customMusic.filter(p => !existingValues.has(p.value));
+                return [...prev, ...newItems];
+            });
+        }
+    }, [isCreatorMode, selectedMusic]);
 
     if (!isCreatorMode) return null;
 
@@ -164,7 +156,7 @@ const CreatorDashboard: React.FC = () => {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = async (isDraft: boolean) => {
         if (!spellKey.trim()) {
             setSaveMessage('Please enter a magic spell!');
             return;
@@ -180,25 +172,42 @@ const CreatorDashboard: React.FC = () => {
                 .eq('spell_key', spellKey)
                 .single();
 
+            const musicPayload = JSON.stringify({
+                playlist: selectedMusic,
+                isDraft: isDraft
+            });
+
             if (existing) {
-                setSaveMessage('This spell is already taken! Try another one.');
-                setSaving(false);
-                return;
+                // Check ownership/draft status from existing data if needed.
+                // For now, we overwrite.
+
+                const { error } = await supabase
+                    .from('christmas_trees')
+                    .update({
+                        creator_name: 'Santa Helper',
+                        photo_urls: photos.map(p => p.url),
+                        letter_content: letterContent,
+                        music_id: musicPayload
+                    })
+                    .eq('spell_key', spellKey);
+
+                if (error) throw error;
+            } else {
+                // Insert New
+                const { error } = await supabase
+                    .from('christmas_trees')
+                    .insert({
+                        spell_key: spellKey,
+                        creator_name: 'Santa Helper', 
+                        photo_urls: photos.map(p => p.url),
+                        letter_content: letterContent,
+                        music_id: musicPayload
+                    });
+
+                if (error) throw error;
             }
 
-            const { error } = await supabase
-                .from('christmas_trees')
-                .insert({
-                    spell_key: spellKey,
-                    creator_name: 'Santa Helper', // Could be dynamic
-                    photo_urls: photos.map(p => p.url),
-                    letter_content: letterContent,
-                    music_id: selectedMusic // Save selected music path
-                });
-
-            if (error) throw error;
-
-            setSaveMessage(`Success! Share this spell: ${spellKey}`);
+            setSaveMessage(isDraft ? 'Draft saved successfully!' : `Success! Share this spell: ${spellKey}`);
         } catch (err: any) {
             console.error(err);
             setSaveMessage('Error saving: ' + err.message);
@@ -213,12 +222,14 @@ const CreatorDashboard: React.FC = () => {
         }
     };
 
+    const [confirmDelete, setConfirmDelete] = useState(false);
+
     const handleDeleteTree = async () => {
         if (!spellKey) return;
         
-        const confirmStr = prompt(`Type "${spellKey}" to confirm deletion of this magic tree:`);
-        if (confirmStr !== spellKey) {
-            if (confirmStr) alert('Incorrect spell key. Deletion cancelled.');
+        if (!confirmDelete) {
+            setConfirmDelete(true);
+            setTimeout(() => setConfirmDelete(false), 3000); // Reset after 3s
             return;
         }
 
@@ -238,6 +249,7 @@ const CreatorDashboard: React.FC = () => {
             setSaveMessage('Error deleting: ' + err.message);
         } finally {
             setSaving(false);
+            setConfirmDelete(false);
         }
     };
 
@@ -360,7 +372,7 @@ const CreatorDashboard: React.FC = () => {
 
                                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                     {[...AVAILABLE_MUSIC, ...uploadedMusicList].map((music, idx) => {
-                                        const isSelected = selectedMusic.includes(music.value);
+                                        const isSelected = Array.isArray(selectedMusic) && selectedMusic.includes(music.value);
                                         // Check if this is a custom uploaded music (has fileName property)
                                         const isUploaded = 'fileName' in music;
 
@@ -441,14 +453,18 @@ const CreatorDashboard: React.FC = () => {
                         </div>
 
                         {/* Delete Zone */}
-                        <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center opacity-50 hover:opacity-100 transition-opacity">
+                        <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center opacity-50 hover:opacity-100 transition-opacity relative z-50">
                             <span className="text-xs text-gray-500">Danger Zone</span>
                             <button 
-                                onClick={handleDeleteTree}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDeleteTree();
+                                }}
                                 disabled={!spellKey || saving}
-                                className="text-xs text-red-500 hover:text-red-400 underline disabled:opacity-30 disabled:no-underline"
+                                className={`text-xs ${confirmDelete ? 'text-red-600 font-bold scale-110' : 'text-red-500 hover:text-red-400'} underline disabled:opacity-30 disabled:no-underline cursor-pointer transition-all`}
                             >
-                                Delete this Tree
+                                {confirmDelete ? 'Click AGAIN to Confirm Delete' : 'Delete this Tree'}
                             </button>
                         </div>
                     </motion.div>
