@@ -106,6 +106,19 @@ const BackgroundMusic: React.FC = () => {
         // @ts-ignore
         if (audio?.setAttribute) audio.setAttribute('webkit-playsinline', '');
 
+        const pauseOthers = () => {
+            const nodes = Array.from(document.querySelectorAll('audio')) as HTMLAudioElement[];
+            for (const el of nodes) {
+                if (el !== audio) {
+                    try {
+                        el.pause();
+                        el.src = '';
+                    } catch {}
+                }
+            }
+        };
+        pauseOthers();
+
         const tryPlay = async () => {
             try {
                 await audio.play();
@@ -150,6 +163,10 @@ const BackgroundMusic: React.FC = () => {
             window.removeEventListener('touchstart', handleInteraction);
             window.removeEventListener('keydown', handleInteraction);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            try {
+                audio.pause();
+                audio.src = '';
+            } catch {}
         };
     }, []);
 
