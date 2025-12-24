@@ -41,6 +41,22 @@ const LoginScreen: React.FC = () => {
 
             // Load remote data
             setTreeId(data.id);
+            
+            // Check if draft
+            if (data.is_draft) {
+                // Draft Mode: Enter Creator Mode with loaded data
+                setIsCreatorMode(true);
+                setSecretKey(data.spell_key); // Pre-fill spell key in Creator Dashboard if needed
+                
+                // We need to pass the spell key to CreatorDashboard. 
+                // Since CreatorDashboard uses local state for spellKey, we might need a way to pass it.
+                // For now, we set the global secretKey, and we'll update CreatorDashboard to initialize from it if it matches the loaded tree.
+                localStorage.setItem('draft_spell_key', data.spell_key);
+            } else {
+                // Published Mode: Viewer only
+                setIsCreatorMode(false);
+            }
+
             if (data.letter_content) setLetterContent(data.letter_content);
             if (data.photo_urls && Array.isArray(data.photo_urls)) {
                 setPhotos(data.photo_urls.map((url: string) => ({ url, fileName: undefined })));

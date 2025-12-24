@@ -416,13 +416,22 @@ const CreatorDashboard: React.FC = () => {
                                     placeholder="Enter a magic word (e.g. LOVE2025)"
                                     className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm mb-3 focus:border-amber-400 focus:outline-none"
                                 />
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving || uploading}
-                                    className="w-full bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold py-3 rounded-lg hover:from-amber-500 hover:to-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {saving ? 'Casting Spell...' : 'Save & Generate'}
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleSave(true)}
+                                        disabled={saving || uploading}
+                                        className="flex-1 bg-white/10 border border-white/20 text-white font-bold py-3 rounded-lg hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-wider"
+                                    >
+                                        {saving ? 'Saving...' : 'Save Draft'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleSave(false)}
+                                        disabled={saving || uploading}
+                                        className="flex-1 bg-gradient-to-r from-amber-600 to-red-600 text-white font-bold py-3 rounded-lg hover:from-amber-500 hover:to-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-wider"
+                                    >
+                                        {saving ? 'Casting...' : 'Confirm & Generate'}
+                                    </button>
+                                </div>
                                 {saveMessage && (
                                     <p className={`mt-3 text-sm text-center ${saveMessage.includes('Success') ? 'text-green-400' : 'text-red-400'}`}>
                                         {saveMessage}
