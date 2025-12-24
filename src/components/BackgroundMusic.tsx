@@ -11,8 +11,27 @@ const BackgroundMusic: React.FC = () => {
     const hasTriggeredLetterRef = useRef(false);
 
     // Determine effective playlist
-    const playlist = (selectedMusic && selectedMusic.length > 0) 
-        ? selectedMusic 
+    // Robust filtering to remove null/undefined/empty strings AND fix double-encoded URLs
+    const validSelected = Array.isArray(selectedMusic) 
+        ? selectedMusic
+            .filter(m => typeof m === 'string' && m.trim().length > 0)
+            .map(m => {
+                try {
+                    // Fix double encoding (e.g. %2520 -> %20)
+                    // If the URL contains %25, it implies double encoding.
+                    // We try to decode it to get the standard encoded URL.
+                    if (m.includes('%25')) {
+                        return decodeURIComponent(m);
+                    }
+                    return m;
+                } catch (e) {
+                    return m;
+                }
+            })
+        : [];
+
+    const playlist = (validSelected.length > 0) 
+        ? validSelected 
         : DEFAULT_PLAYLIST;
 
     // Reset index if playlist changes (optional, but good for safety)
@@ -122,7 +141,11 @@ const BackgroundMusic: React.FC = () => {
 
     return (
         <div className="fixed top-6 right-6 z-50 pointer-events-auto">
-            <audio ref={audioRef} src={playlist[currentTrackIndex]} />
+            <audio 
+                ref={audioRef} 
+                src={playlist[currentTrackIndex]} 
+                crossOrigin="anonymous"
+            />
             <button
                 onClick={togglePlay}
                 className={`

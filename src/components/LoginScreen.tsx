@@ -4,7 +4,7 @@ import { TreeContext, TreeContextType } from '../types';
 import { supabase } from '../supabaseClient';
 
 const LoginScreen: React.FC = () => {
-    const { setIsAuthenticated, setPhotos, setLetterContent, setIsCreatorMode, setTreeId, setSelectedMusic } = useContext(TreeContext) as TreeContextType;
+    const { setIsAuthenticated, setPhotos, setLetterContent, setIsCreatorMode, setTreeId, setSelectedMusic, setSecretKey } = useContext(TreeContext) as TreeContextType;
     const [input, setInput] = useState('');
     const [error, setError] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
@@ -15,7 +15,7 @@ const LoginScreen: React.FC = () => {
         const code = input.trim();
 
         // 1. Creator Mode Check
-        if (code === 'Happy Christmas') {
+        if (code === 'Happy Christmas' || code === 'Edit Jojo') {
             setTimeout(() => {
                 setIsCreatorMode(true);
                 // Clear default data for creator mode
@@ -23,6 +23,31 @@ const LoginScreen: React.FC = () => {
                 setLetterContent('');
                 setIsAuthenticated(true);
                 setIsChecking(false);
+
+                if (code === 'Edit Jojo') {
+                    // Special backdoor to load Jojo's data into Creator Mode
+                    // We need to fetch it first
+                    (async () => {
+                         const { data } = await supabase.from('christmas_trees').select('*').eq('spell_key', 'Happy Christmas Jojo').single();
+                         if (data) {
+                             setSecretKey(data.spell_key);
+                             setTreeId(data.id);
+                             setLetterContent(data.letter_content);
+                             if (data.music_id) {
+                                try {
+                                    let parsed = JSON.parse(data.music_id);
+                                    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                                    if (parsed.playlist) setSelectedMusic(parsed.playlist);
+                                    else if (Array.isArray(parsed)) setSelectedMusic(parsed);
+                                    else setSelectedMusic([data.music_id]);
+                                } catch(e) { setSelectedMusic([data.music_id]); }
+                             }
+                             if (data.photo_urls) {
+                                 setPhotos(data.photo_urls.map((u: any) => typeof u === 'string' ? {url: u} : u));
+                             }
+                         }
+                    })();
+                }
             }, 800);
             return;
         }
@@ -39,36 +64,42 @@ const LoginScreen: React.FC = () => {
                 throw new Error('Invalid Spell');
             }
 
+            // Clear previous state explicitly BEFORE setting new state to prevent data bleeding
+            setPhotos([]); 
+            setLetterContent('');
+            setSelectedMusic([]);
+
             // Load remote data
             setTreeId(data.id);
             
-            // Check if draft
-            if (data.is_draft) {
-                // Draft Mode: Enter Creator Mode with loaded data
-                setIsCreatorMode(true);
-                setSecretKey(data.spell_key); // Pre-fill spell key in Creator Dashboard if needed
-                
-                // We need to pass the spell key to CreatorDashboard. 
-                // Since CreatorDashboard uses local state for spellKey, we might need a way to pass it.
-                // For now, we set the global secretKey, and we'll update CreatorDashboard to initialize from it if it matches the loaded tree.
-                localStorage.setItem('draft_spell_key', data.spell_key);
-            } else {
-                // Published Mode: Viewer only
-                setIsCreatorMode(false);
-            }
+            // Handle music_id and Draft Status
+            // Since we cannot alter table structure easily, we stored isDraft inside music_id JSON if it's a new record
+            let isDraft = false;
 
-            if (data.letter_content) setLetterContent(data.letter_content);
-            if (data.photo_urls && Array.isArray(data.photo_urls)) {
-                setPhotos(data.photo_urls.map((url: string) => ({ url, fileName: undefined })));
-            }
-            
-            // Handle music_id
             if (data.music_id) {
                 try {
-                    const parsed = JSON.parse(data.music_id);
+                    let parsed = JSON.parse(data.music_id);
+                    
+                    // Double parse check: if it was double-serialized (string inside string), parse again
+                    if (typeof parsed === 'string') {
+                        try {
+                            parsed = JSON.parse(parsed);
+                        } catch (e) {
+                            // It was just a simple string URL, keep as is
+                        }
+                    }
+
                     if (Array.isArray(parsed)) {
+                        // Legacy format or standard array
                         setSelectedMusic(parsed);
+                    } else if (typeof parsed === 'object' && parsed !== null) {
+                        // New format: { playlist: string[], isDraft: boolean }
+                        if (parsed.playlist && Array.isArray(parsed.playlist)) {
+                            setSelectedMusic(parsed.playlist);
+                        }
+                        if (parsed.isDraft === true) isDraft = true;
                     } else {
+                        // Fallback string
                         setSelectedMusic([data.music_id]);
                     }
                 } catch (e) {
@@ -77,6 +108,34 @@ const LoginScreen: React.FC = () => {
                 }
             } else {
                 setSelectedMusic([]);
+            }
+
+            // Check if draft (using our extracted flag)
+            if (isDraft) {
+                // Draft Mode: Enter Creator Mode with loaded data
+                setIsCreatorMode(true);
+                setSecretKey(data.spell_key); // Pre-fill spell key in Creator Dashboard if needed
+                
+                // Pass spell key to CreatorDashboard
+                localStorage.setItem('draft_spell_key', data.spell_key);
+            } else {
+                // Published Mode: Viewer only
+                setIsCreatorMode(false);
+            }
+
+            if (data.letter_content) setLetterContent(data.letter_content);
+            if (data.photo_urls && Array.isArray(data.photo_urls)) {
+                try {
+                    setPhotos(data.photo_urls.map((item: any) => {
+                        // Handle both string URLs and object format
+                        if (typeof item === 'string') return { url: item, fileName: undefined };
+                        if (typeof item === 'object' && item?.url) return item;
+                        return { url: String(item), fileName: undefined };
+                    }));
+                } catch (e) {
+                    console.warn("Error parsing photos:", e);
+                    setPhotos([]);
+                }
             }
 
             setIsAuthenticated(true);
