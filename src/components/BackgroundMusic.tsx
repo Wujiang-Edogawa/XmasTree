@@ -64,14 +64,28 @@ const BackgroundMusic: React.FC = () => {
             }
         };
 
+        const handleError = (e: Event) => {
+            console.log("Audio load error, skipping to next:", e);
+            setCurrentTrackIndex(prev => (prev + 1) % playlist.length);
+        };
+
+        const handleAbort = (e: Event) => {
+            console.log("Audio request aborted, will try next:", e);
+            setCurrentTrackIndex(prev => (prev + 1) % playlist.length);
+        };
+
         audio.addEventListener('ended', handleEnded);
         audio.addEventListener('canplay', handleCanPlay);
+        audio.addEventListener('error', handleError);
+        audio.addEventListener('abort', handleAbort);
 
         return () => {
             audio.removeEventListener('ended', handleEnded);
             audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            audio.removeEventListener('abort', handleAbort);
         };
-    }, [setIsLetterOpen, isPlaying, playlist]); // 添加 isPlaying 和 playlist 依赖
+    }, [setIsLetterOpen, isPlaying, playlist]);
 
     // 移除原来的 useEffect [currentTrackIndex]，因为交给 onCanPlay 处理了
 
@@ -80,6 +94,11 @@ const BackgroundMusic: React.FC = () => {
         if (!audio) return;
 
         audio.volume = 0.5;
+        audio.muted = true;
+        audio.setAttribute('playsinline', '');
+        // Safari
+        // @ts-ignore
+        if (audio?.setAttribute) audio.setAttribute('webkit-playsinline', '');
 
         const tryPlay = async () => {
             try {
@@ -98,6 +117,7 @@ const BackgroundMusic: React.FC = () => {
         tryPlay();
 
         const handleInteraction = () => {
+            audio.muted = false;
             if (audio.paused) {
                 audio.play()
                     .then(() => setIsPlaying(true))
@@ -145,6 +165,8 @@ const BackgroundMusic: React.FC = () => {
                 ref={audioRef} 
                 src={playlist[currentTrackIndex]} 
                 crossOrigin="anonymous"
+                playsInline
+                preload="none"
             />
             <button
                 onClick={togglePlay}
