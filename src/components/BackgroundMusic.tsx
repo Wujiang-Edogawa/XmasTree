@@ -34,12 +34,18 @@ const BackgroundMusic: React.FC = () => {
         ? validSelected 
         : DEFAULT_PLAYLIST;
 
-    // Reset index if playlist changes (optional, but good for safety)
     useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
         if (currentTrackIndex >= playlist.length) {
             setCurrentTrackIndex(0);
         }
-    }, [playlist, currentTrackIndex]);
+        audio.pause();
+        audio.load();
+        if (isPlaying) {
+            audio.play().catch(() => {});
+        }
+    }, [playlist]);
 
     // 监听播放结束 & 切歌逻辑
     useEffect(() => {
@@ -167,6 +173,7 @@ const BackgroundMusic: React.FC = () => {
                 crossOrigin="anonymous"
                 playsInline
                 preload="none"
+                key={playlist[currentTrackIndex]}
             />
             <button
                 onClick={togglePlay}
